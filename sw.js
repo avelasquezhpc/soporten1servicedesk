@@ -1,7 +1,7 @@
 /* Registro Rápido N1 · service worker
    Cache-first para el shell de la app. Nunca cachea Graph ni el login. */
 
-const CACHE = "rrn1-shell-v2";
+const CACHE = "rrn1-shell-v3";
 const SHELL = [
   "./",
   "./index.html",
@@ -54,6 +54,21 @@ self.addEventListener("fetch", (ev) => {
 
   // Todo lo demás fuera del origen (Graph, login) va directo a la red.
   if (!mismoOrigen) return;
+
+  // La configuración central se pide siempre a la red: es la que manda.
+  // El caché queda solo como respaldo para cuando no hay señal.
+  if (url.pathname.endsWith("/config.json")) {
+    ev.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copia = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copia));
+        }
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
 
   if (req.mode === "navigate") {
     ev.respondWith(

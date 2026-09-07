@@ -77,7 +77,7 @@ button{cursor:pointer;border:0;background:none}
 .rotulo{display:block;font-size:13px;color:var(--texto2);margin:0 0 6px 2px}
 .fila{display:flex;gap:8px;align-items:stretch}
 .fila>*{min-width:0}
-select,input[type=text],input[type=email],textarea{
+select,input[type=text],input[type=email],input[type=password],textarea{
   width:100%;background:var(--superficie);color:var(--texto);
   border:1px solid var(--linea);border-radius:var(--r);
   padding:14px 12px;min-height:var(--alto-tactil);
@@ -343,6 +343,25 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
   </div>
 </section>
 
+<!-- ============ BLOQUEO DE AJUSTES ============ -->
+<section id="vistaBloqueo" class="vista oculto">
+  <div class="encabezado-vista">
+    <button class="icono" data-volver aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h2>Ajustes protegidos</h2>
+  </div>
+  <p class="ayuda">Los catálogos, los destinatarios y la cuenta de correo los administra el responsable del equipo. Si necesitás un cambio, pedíselo.</p>
+  <div class="campo">
+    <label class="rotulo" for="inpClave">Contraseña de administrador</label>
+    <input type="password" id="inpClave" autocomplete="current-password" enterkeyhint="go" spellcheck="false">
+    <p class="error-campo oculto" id="errClave"></p>
+  </div>
+  <div class="btn-grupo">
+    <button class="btn senal ancho" id="btnDesbloquear">Entrar a Ajustes</button>
+  </div>
+</section>
+
 <!-- ============ HISTORIAL ============ -->
 <section id="vistaHistorial" class="vista oculto">
   <div class="encabezado-vista">
@@ -363,6 +382,8 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
     </button>
     <h2>Ajustes</h2>
   </div>
+
+  <div id="franjaConfig" class="franja oculto"></div>
 
   <details class="seccion" id="secUsuarios">
     <summary>Usuarios (técnicos) <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
@@ -429,6 +450,11 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
     </div>
   </details>
 
+  <details class="seccion" id="secSeguridad">
+    <summary>Bloqueo de ajustes <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion" id="cuerpoSeguridad"></div>
+  </details>
+
   <details class="seccion" id="secRespaldo">
     <summary>Respaldo y datos <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
     <div class="cuerpo-seccion">
@@ -438,6 +464,11 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
         <button class="btn" id="btnImportar">Importar</button>
       </div>
       <input type="file" id="archivoImportar" accept="application/json,.json" class="oculto">
+      <p class="ayuda">Para que el cambio les llegue a los diez teléfonos, descargá <code>config.json</code> y subilo a la raíz del repositorio. La app lo relee en cada apertura y pisa lo que tenga guardado cada teléfono.</p>
+      <div class="btn-grupo">
+        <button class="btn senal" id="btnConfigJson">Descargar config.json</button>
+      </div>
+      <p class="ayuda" id="infoConfig"></p>
       <p class="ayuda" id="infoAlmacen"></p>
       <div class="btn-grupo">
         <button class="btn chico" id="btnVaciarCola">Vaciar cola de pendientes</button>
@@ -467,7 +498,8 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.1.0";
+const VERSION_APP = "1.3.0";
+const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
 /* ---------------------------- Utilidades ---------------------------- */
@@ -772,6 +804,14 @@ function actualizarPreview() {
 
 /* ------------------------- Destinatarios del envío ------------------------- */
 
+function mostrarCorreo(email) {
+  // Con el bloqueo puesto, el técnico ve a quién le escribe pero no la dirección completa.
+  if (typeof hayBloqueo !== "function" || !hayBloqueo() || sesionViva()) return email;
+  const partes = String(email).split("@");
+  if (partes.length !== 2) return "•••";
+  return partes[0].slice(0, 1) + "•••@" + partes[1];
+}
+
 function destinatariosPorDefecto() {
   return new Set(activos(estado.destinatarios).filter((r) => r.porDefecto).map((r) => r.id));
 }
@@ -795,7 +835,7 @@ function pintarChips() {
     ? disponibles.map((r) =>
         '<label class="opcion-dest"><input type="checkbox" data-dest="' + esc(r.id) + '"' +
         (seleccionDest.has(r.id) ? " checked" : "") + '><span class="datos"><b>' + esc(r.nombre) +
-        ' <span class="marca-def">' + esc(r.tipo.toUpperCase()) + '</span></b><span>' + esc(r.email) +
+        ' <span class="marca-def">' + esc(r.tipo.toUpperCase()) + '</span></b><span>' + esc(mostrarCorreo(r.email)) +
         "</span></span></label>"
       ).join("")
     : '<p class="ayuda" style="padding:10px">Agregá destinatarios en Ajustes para poder enviar.</p>';
@@ -1333,10 +1373,18 @@ function pintarAjustes() {
   $("#inpClientId").value = estado.prefs.clientId;
   $("#inpTenantId").value = estado.prefs.tenantId;
   $("#redirectUri").textContent = location.origin + location.pathname;
+  pintarFranjaConfig();
+  const info = $("#infoConfig");
+  if (info) {
+    info.textContent = configRemota
+      ? "Última lectura del repositorio: " + fmtFecha(configRemota.leida) + "."
+      : "Sin config.json en el servidor: cada teléfono se configura por su cuenta.";
+  }
   $("#ejemploAsunto").textContent = ejemploAsunto();
   $("#pieVersion").textContent = "Registro Rápido N1 · versión " + VERSION_APP;
   pintarEstadoCuenta();
   pintarInfoAlmacen();
+  pintarSeguridad();
 }
 
 function ejemploAsunto() {
@@ -1767,8 +1815,8 @@ $("#listaHistorial").addEventListener("click", (ev) => {
 
 const CLAVES_CATALOGO = ["usuarios", "categorias", "descripciones", "destinatarios"];
 
-$("#btnExportar").addEventListener("click", () => {
-  const datos = {
+function armarRespaldo() {
+  return {
     app: "registro-rapido-n1",
     version: VERSION_APP,
     exportado: new Date().toISOString(),
@@ -1776,18 +1824,32 @@ $("#btnExportar").addEventListener("click", () => {
     categorias: estado.categorias,
     descripciones: estado.descripciones,
     destinatarios: estado.destinatarios,
-    preferencias: estado.prefs
+    preferencias: estado.prefs,
+    bloqueo: bloqueo
   };
+}
+
+function descargarJSON(datos, nombre) {
   const blob = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "registro-n1-" + selloArchivo(new Date()) + ".json";
+  a.download = nombre;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+$("#btnExportar").addEventListener("click", () => {
+  descargarJSON(armarRespaldo(), "registro-n1-" + selloArchivo(new Date()) + ".json");
   toast("Configuración exportada.", "ok");
+});
+
+$("#btnConfigJson").addEventListener("click", () => {
+  if (!bloqueo) toast("Ojo: sin bloqueo activo, cualquiera puede editar Ajustes.", "malo");
+  descargarJSON(armarRespaldo(), "config.json");
+  toast("Subí este archivo a la raíz del repositorio.", "ok");
 });
 
 $("#btnImportar").addEventListener("click", () => $("#archivoImportar").click());
@@ -1814,6 +1876,12 @@ $("#archivoImportar").addEventListener("change", async (ev) => {
   });
   if (datos.preferencias && typeof datos.preferencias === "object") {
     estado.prefs = Object.assign({}, PREFS_DEF, datos.preferencias);
+  }
+  if (datos.bloqueo && datos.bloqueo.hash && datos.bloqueo.sal) {
+    bloqueo = datos.bloqueo;
+    almacen.escribir("bloqueo", bloqueo);
+    desbloqueado = true;
+    ultimaActividad = Date.now();
   }
   normalizarOrden("categorias");
   guardarTodo();
@@ -1847,20 +1915,293 @@ $("#btnBorrarHistorial").addEventListener("click", () => {
 });
 
 /* =======================================================================
+   BLOQUEO DE AJUSTES
+   La contraseña NUNCA se guarda: se guarda un hash PBKDF2-SHA256 con sal
+   aleatoria. De ese hash no se puede volver a la contraseña, así que no
+   está ni en el código ni en el teléfono.
+   Ojo con el alcance real: esto impide que un técnico CAMBIE la
+   configuración desde la app. No cifra el localStorage, así que quien
+   conecte el teléfono a una PC con depuración puede leer los datos.
+   ======================================================================= */
+
+const CRIPTO_OK = !!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues && window.isSecureContext);
+const ITERACIONES = 210000;
+const MINUTOS_SESION = 5;
+
+let bloqueo = almacen.leer("bloqueo", null);   // { sal, hash, iter }
+let desbloqueado = false;                      // solo en memoria: al cerrar la app vuelve a bloquearse
+let ultimaActividad = 0;
+let intentosFallidos = 0;
+let esperaHasta = 0;
+
+function b64(buf) {
+  let s2 = "";
+  new Uint8Array(buf).forEach((b) => { s2 += String.fromCharCode(b); });
+  return btoa(s2);
+}
+
+function deB64(txt) {
+  const bin = atob(txt);
+  const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+
+async function derivar(clave, sal, iter) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: sal, iterations: iter, hash: "SHA-256" }, base, 256
+  );
+  return b64(bits);
+}
+
+function hayBloqueo() { return !!(bloqueo && bloqueo.hash); }
+
+function sesionViva() {
+  if (!desbloqueado) return false;
+  if (Date.now() - ultimaActividad > MINUTOS_SESION * 60000) { desbloqueado = false; return false; }
+  return true;
+}
+
+function marcarActividad() { if (desbloqueado) ultimaActividad = Date.now(); }
+
+function ajustesAbiertos() { return hayBloqueo() ? sesionViva() : true; }
+
+async function verificarClave(clave) {
+  if (!hayBloqueo()) return false;
+  const hash = await derivar(clave, deB64(bloqueo.sal), bloqueo.iter || ITERACIONES);
+  return hash === bloqueo.hash;
+}
+
+async function fijarClave(clave) {
+  const sal = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await derivar(clave, sal, ITERACIONES);
+  bloqueo = { sal: b64(sal), hash: hash, iter: ITERACIONES };
+  almacen.escribir("bloqueo", bloqueo);
+}
+
+/* ------------------------------ Pantalla de entrada ----------------------- */
+
+function pintarBloqueo() {
+  $("#inpClave").value = "";
+  $("#errClave").classList.add("oculto");
+  setTimeout(() => $("#inpClave").focus(), 120);
+}
+
+async function intentarDesbloquear() {
+  const err = $("#errClave");
+  const btn = $("#btnDesbloquear");
+  const clave = $("#inpClave").value;
+
+  if (Date.now() < esperaHasta) {
+    err.textContent = "Demasiados intentos. Esperá " + Math.ceil((esperaHasta - Date.now()) / 1000) + " segundos.";
+    err.classList.remove("oculto");
+    return;
+  }
+  if (!clave) { err.textContent = "Escribí la contraseña."; err.classList.remove("oculto"); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Verificando…";
+  let ok = false;
+  try { ok = await verificarClave(clave); } catch (e) { ok = false; }
+  btn.disabled = false;
+  btn.textContent = "Entrar a Ajustes";
+
+  if (!ok) {
+    intentosFallidos++;
+    if (intentosFallidos >= 5) { esperaHasta = Date.now() + 30000; intentosFallidos = 0; }
+    err.textContent = "Contraseña incorrecta.";
+    err.classList.remove("oculto");
+    $("#inpClave").value = "";
+    vibrar([40, 60, 40]);
+    return;
+  }
+  intentosFallidos = 0;
+  desbloqueado = true;
+  ultimaActividad = Date.now();
+  $("#inpClave").value = "";
+  mostrarVista("ajustes");
+}
+
+$("#btnDesbloquear").addEventListener("click", intentarDesbloquear);
+$("#inpClave").addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); intentarDesbloquear(); } });
+
+/* ------------------------- Sección Bloqueo en Ajustes --------------------- */
+
+function pintarSeguridad() {
+  const cont = $("#cuerpoSeguridad");
+  const cuenta = $("#secSeguridad summary .cuenta");
+  if (cuenta) cuenta.textContent = hayBloqueo() ? "Activo" : "Sin proteger";
+
+  if (!CRIPTO_OK) {
+    cont.innerHTML = '<p class="ayuda">El bloqueo necesita que la app se abra por HTTPS (o localhost). Abierta como archivo local, el navegador no habilita el cifrado que resguarda la contraseña.</p>';
+    return;
+  }
+
+  if (!hayBloqueo()) {
+    cont.innerHTML =
+      '<p class="ayuda">Con el bloqueo activo, esta pantalla pide contraseña. Los técnicos siguen registrando y enviando normalmente: lo único que queda cerrado son los catálogos, los destinatarios y la cuenta de correo.</p>' +
+      '<div class="campo"><label class="rotulo" for="clv1">Contraseña nueva</label><input type="password" id="clv1" autocomplete="new-password" spellcheck="false"></div>' +
+      '<div class="campo"><label class="rotulo" for="clv2">Repetila</label><input type="password" id="clv2" autocomplete="new-password" spellcheck="false"></div>' +
+      '<p class="error-campo oculto" id="errSeg"></p>' +
+      '<div class="btn-grupo"><button class="btn senal" id="btnActivarBloqueo">Activar bloqueo</button></div>' +
+      '<p class="ayuda">Si la olvidás no hay forma de recuperarla: se guarda un hash, no la contraseña. Se recupera borrando los datos del sitio y volviendo a importar el respaldo .json.</p>';
+    $("#btnActivarBloqueo").addEventListener("click", activarBloqueo);
+  } else {
+    cont.innerHTML =
+      '<p class="ayuda">Bloqueo activo. La sesión se cierra sola a los ' + MINUTOS_SESION + ' minutos sin uso, al salir de Ajustes y cada vez que se cierra la app.</p>' +
+      '<div class="campo"><label class="rotulo" for="clv0">Contraseña actual</label><input type="password" id="clv0" autocomplete="current-password" spellcheck="false"></div>' +
+      '<div class="campo"><label class="rotulo" for="clv1">Contraseña nueva</label><input type="password" id="clv1" autocomplete="new-password" spellcheck="false"></div>' +
+      '<div class="campo"><label class="rotulo" for="clv2">Repetí la nueva</label><input type="password" id="clv2" autocomplete="new-password" spellcheck="false"></div>' +
+      '<p class="error-campo oculto" id="errSeg"></p>' +
+      '<div class="btn-grupo"><button class="btn senal" id="btnCambiarClave">Cambiar contraseña</button>' +
+      '<button class="btn" id="btnQuitarBloqueo">Quitar bloqueo</button></div>';
+    $("#btnCambiarClave").addEventListener("click", cambiarClave);
+    $("#btnQuitarBloqueo").addEventListener("click", quitarBloqueo);
+  }
+}
+
+function errSeg(msg) {
+  const e = $("#errSeg");
+  if (!e) return;
+  e.textContent = msg;
+  e.classList.toggle("oculto", !msg);
+}
+
+function validarPar() {
+  const c1 = $("#clv1").value, c2 = $("#clv2").value;
+  if (c1.length < 8) { errSeg("Usá al menos 8 caracteres."); return null; }
+  if (c1 !== c2) { errSeg("Las dos contraseñas no coinciden."); return null; }
+  errSeg("");
+  return c1;
+}
+
+async function activarBloqueo() {
+  const clave = validarPar();
+  if (clave === null) return;
+  const b = $("#btnActivarBloqueo");
+  b.disabled = true; b.textContent = "Guardando…";
+  await fijarClave(clave);
+  desbloqueado = true;
+  ultimaActividad = Date.now();
+  pintarSeguridad();
+  pintarChips();
+  toast("Bloqueo activado. Anotá la contraseña en un lugar seguro.", "ok");
+}
+
+async function cambiarClave() {
+  const actual = $("#clv0").value;
+  const clave = validarPar();
+  if (clave === null) return;
+  const b = $("#btnCambiarClave");
+  b.disabled = true; b.textContent = "Verificando…";
+  const ok = await verificarClave(actual);
+  b.disabled = false; b.textContent = "Cambiar contraseña";
+  if (!ok) { errSeg("La contraseña actual no es correcta."); return; }
+  await fijarClave(clave);
+  pintarSeguridad();
+  toast("Contraseña cambiada.", "ok");
+}
+
+async function quitarBloqueo() {
+  const actual = $("#clv0").value;
+  if (!actual) { errSeg("Escribí la contraseña actual para quitar el bloqueo."); return; }
+  const b = $("#btnQuitarBloqueo");
+  b.disabled = true; b.textContent = "Verificando…";
+  const ok = await verificarClave(actual);
+  b.disabled = false; b.textContent = "Quitar bloqueo";
+  if (!ok) { errSeg("La contraseña actual no es correcta."); return; }
+  bloqueo = null;
+  almacen.borrar("bloqueo");
+  desbloqueado = false;
+  pintarSeguridad();
+  pintarChips();
+  toast("Ajustes desbloqueados para cualquiera.");
+}
+
+/* Cada toque dentro de Ajustes renueva la sesión */
+["pointerdown", "keydown", "change"].forEach((ev) => {
+  $("#vistaAjustes").addEventListener(ev, marcarActividad, true);
+});
+setInterval(() => {
+  if (hayBloqueo() && desbloqueado && !sesionViva() && !$("#vistaAjustes").classList.contains("oculto")) {
+    mostrarVista("registro");
+    toast("Ajustes bloqueados por inactividad.");
+  }
+}, 20000);
+
+/* =======================================================================
+   CONFIGURACIÓN CENTRAL — config.json publicado en el repositorio
+   El repositorio es la fuente de verdad: la app lo relee en cada apertura
+   y sobrescribe catálogos, destinatarios, cuenta de correo y bloqueo.
+   Un cambio hecho a mano en el almacenamiento del teléfono se pierde al
+   reabrir, y nunca llega a los demás técnicos. El control de acceso real
+   es el permiso de escritura del repositorio, no esta contraseña.
+   ======================================================================= */
+
+const CLAVES_ADMIN = ["separador", "firma", "modoEnvio", "clientId", "tenantId"];
+let configRemota = almacen.leer("configSello", null);   // { sello, leida }
+
+function aplicarConfig(datos) {
+  CLAVES_CATALOGO.forEach((k) => { if (Array.isArray(datos[k])) estado[k] = datos[k]; });
+  if (datos.preferencias && typeof datos.preferencias === "object") {
+    CLAVES_ADMIN.forEach((k) => {
+      if (datos.preferencias[k] !== undefined) estado.prefs[k] = datos.preferencias[k];
+    });
+  }
+  // El bloqueo publicado manda: borrar los datos del navegador ya no lo quita.
+  if (datos.bloqueo && datos.bloqueo.hash && datos.bloqueo.sal) {
+    bloqueo = datos.bloqueo;
+    almacen.escribir("bloqueo", bloqueo);
+  }
+  normalizarOrden("categorias");
+  guardarTodo();
+  configRemota = { sello: datos.exportado || "", leida: new Date().toISOString() };
+  almacen.escribir("configSello", configRemota);
+}
+
+async function cargarConfigRemota() {
+  let datos = null;
+  try {
+    const r = await fetch(RUTA_CONFIG, { cache: "no-cache" });
+    if (r.ok) datos = await r.json();
+  } catch (e) { /* sin red o sin archivo: queda lo que ya tiene el teléfono */ }
+  if (!datos || datos.app !== "registro-rapido-n1") return;
+  aplicarConfig(datos);
+}
+
+function pintarFranjaConfig() {
+  const f = $("#franjaConfig");
+  if (!configRemota) {
+    f.className = "franja";
+    f.innerHTML = ICO.alerta + "<div>Este teléfono todavía no leyó un <b>config.json</b> publicado: la configuración es local y solo vale para este equipo.</div>";
+    return;
+  }
+  const sello = configRemota.sello ? fmtFecha(configRemota.sello) : "sin fecha";
+  f.className = "franja aviso";
+  f.innerHTML = ICO.alerta + "<div>Configuración publicada el " + esc(sello) +
+    ". Lo que cambies acá vale solo en este teléfono hasta que publiques un <b>config.json</b> nuevo en el repositorio.</div>";
+}
+
+/* =======================================================================
    NAVEGACIÓN E INICIO
    ======================================================================= */
 
-const VISTAS = { registro: "#vistaRegistro", ajustes: "#vistaAjustes", historial: "#vistaHistorial" };
+const VISTAS = { registro: "#vistaRegistro", ajustes: "#vistaAjustes", historial: "#vistaHistorial", bloqueo: "#vistaBloqueo" };
 
 function mostrarVista(nombre) {
+  if (nombre === "ajustes" && !ajustesAbiertos()) nombre = "bloqueo";
+  if (nombre !== "ajustes" && hayBloqueo()) desbloqueado = false;
   Object.keys(VISTAS).forEach((k) => $(VISTAS[k]).classList.toggle("oculto", k !== nombre));
   const enRegistro = nombre === "registro";
   $("#pieEnvio").classList.toggle("oculto", !enRegistro);
   document.body.classList.toggle("sin-pie", !enRegistro);
-  $("#btnAjustes").setAttribute("aria-pressed", String(nombre === "ajustes"));
+  $("#btnAjustes").setAttribute("aria-pressed", String(nombre === "ajustes" || nombre === "bloqueo"));
   $("#btnHistorial").setAttribute("aria-pressed", String(nombre === "historial"));
   if (nombre === "ajustes") pintarAjustes();
   if (nombre === "historial") pintarHistorial();
+  if (nombre === "bloqueo") pintarBloqueo();
+  if (nombre === "registro") pintarChips();
   window.scrollTo(0, 0);
 }
 
@@ -1870,7 +2211,8 @@ function refrescarPrincipal() {
 }
 
 $("#btnAjustes").addEventListener("click", () => {
-  mostrarVista($("#vistaAjustes").classList.contains("oculto") ? "ajustes" : "registro");
+  const fuera = $("#vistaAjustes").classList.contains("oculto") && $("#vistaBloqueo").classList.contains("oculto");
+  mostrarVista(fuera ? "ajustes" : "registro");
 });
 $("#btnHistorial").addEventListener("click", () => {
   mostrarVista($("#vistaHistorial").classList.contains("oculto") ? "historial" : "registro");
@@ -1886,6 +2228,7 @@ if ("serviceWorker" in navigator) {
 
 /* Arranque */
 (async function iniciar() {
+  await cargarConfigRemota();
   refrescarPrincipal();
   mostrarVista("registro");
   await actualizarPendientes();
