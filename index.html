@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="es-GT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12161c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef0f3" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Registro N1">
+<title>Registro Rápido N1 · Nodus</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --fondo:#12161c; --superficie:#191f28; --superficie2:#212936; --linea:#2e3846;
+  --texto:#e8ecf2; --texto2:#97a2b2; --senal:#ffc21a; --sobreSenal:#1a1204;
+  --ok:#3ecf8e; --error:#ff6b5e; --aviso:#ffa53d;
+  --r:12px; --alto-tactil:52px;
+  --sombra:0 2px 0 rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --fondo:#eef0f3; --superficie:#ffffff; --superficie2:#f3f5f8; --linea:#d5dae1;
+    --texto:#141a22; --texto2:#5b6674; --senal:#f2b202; --sobreSenal:#1a1204;
+    --ok:#0f9d58; --error:#d13c30; --aviso:#b26a00;
+    --sombra:0 1px 0 rgba(16,24,40,.08);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--fondo); color:var(--texto);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px; line-height:1.45;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  overscroll-behavior-y:contain;
+}
+body.sin-pie{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--senal);outline-offset:2px;border-radius:4px}
+.oculto{display:none !important}
+
+/* ---------- Barra superior ---------- */
+.barra{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;gap:8px;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+  background:var(--fondo);border-bottom:1px solid var(--linea);
+}
+.marca{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+.marca b{font-size:16px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.marca span{font-size:12px;color:var(--texto2)}
+.icono{
+  width:44px;height:44px;display:grid;place-items:center;position:relative;
+  border-radius:10px;background:var(--superficie);border:1px solid var(--linea);color:var(--texto);
+}
+.icono svg{width:21px;height:21px;display:block}
+.icono[aria-pressed="true"]{background:var(--senal);border-color:var(--senal);color:var(--sobreSenal)}
+.globo{
+  position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;
+  border-radius:10px;background:var(--aviso);color:#1a1204;
+  font-size:12px;font-weight:700;display:grid;place-items:center;
+}
+
+/* ---------- Vistas ---------- */
+.vista{padding:14px}
+.encabezado-vista{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+.encabezado-vista h2{font-size:19px}
+
+/* ---------- Campos ---------- */
+.campo{margin-bottom:14px}
+.rotulo{display:block;font-size:13px;color:var(--texto2);margin:0 0 6px 2px}
+.fila{display:flex;gap:8px;align-items:stretch}
+.fila>*{min-width:0}
+select,input[type=text],input[type=email],textarea{
+  width:100%;background:var(--superficie);color:var(--texto);
+  border:1px solid var(--linea);border-radius:var(--r);
+  padding:14px 12px;min-height:var(--alto-tactil);
+  box-shadow:var(--sombra);appearance:none;
+}
+select{
+  padding-right:38px;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2397a2b2' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
+}
+select.vacio{border-color:var(--senal);border-width:2px}
+textarea{min-height:120px;resize:vertical;line-height:1.5}
+.candado{
+  flex:0 0 52px;width:52px;border-radius:var(--r);
+  background:var(--superficie);border:1px solid var(--linea);color:var(--texto2);
+  display:grid;place-items:center;box-shadow:var(--sombra);
+}
+.candado svg{width:22px;height:22px}
+.candado[aria-pressed="true"]{background:var(--senal);border-color:var(--senal);color:var(--sobreSenal)}
+
+/* ---------- Etiqueta de asunto (el elemento protagonista) ---------- */
+.etiqueta-asunto{
+  position:relative;margin:2px 0 18px;padding:12px 14px 12px 18px;
+  background:var(--superficie2);border:1px solid var(--linea);border-radius:var(--r);
+  overflow:hidden;
+}
+.etiqueta-asunto::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--senal)}
+.etiqueta-asunto .tit{font-size:12px;color:var(--texto2);margin-bottom:4px}
+#previewAsunto{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:15px;line-height:1.4;word-break:break-word;
+}
+#previewAsunto.pendiente{color:var(--texto2)}
+
+/* ---------- Botones ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--alto-tactil);padding:12px 16px;border-radius:var(--r);
+  background:var(--superficie);border:1px solid var(--linea);color:var(--texto);
+  font-weight:600;box-shadow:var(--sombra);
+}
+.btn svg{width:20px;height:20px;flex:0 0 auto}
+.btn.ancho{width:100%}
+.btn.senal{background:var(--senal);border-color:var(--senal);color:var(--sobreSenal)}
+.btn.activo{background:var(--error);border-color:var(--error);color:#fff}
+.btn.chico{min-height:44px;padding:8px 12px;font-size:14px;font-weight:600}
+.btn:disabled{opacity:.5}
+.btn-grupo{display:flex;gap:8px;margin-top:8px}
+.btn-grupo .btn{flex:1}
+
+/* ---------- Dictado ---------- */
+.grabando{animation:pulso 1.1s ease-in-out infinite}
+@keyframes pulso{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.grabando{animation:none}}
+#btnDictado{min-height:58px;font-size:17px}
+.crono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-variant-numeric:tabular-nums;opacity:.85}
+.punto-rojo{width:10px;height:10px;border-radius:50%;background:var(--error);display:inline-block}
+
+/* ---------- Chips ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 11px;border-radius:999px;font-size:13px;
+  background:var(--superficie2);border:1px solid var(--linea);color:var(--texto);
+}
+.chip b{font-weight:700;color:var(--texto2);font-size:11px}
+.chip.apagado{opacity:.45;text-decoration:line-through}
+.selector-dest{
+  margin-top:10px;border:1px solid var(--linea);border-radius:var(--r);
+  background:var(--superficie);padding:6px;
+}
+.opcion-dest{
+  display:flex;align-items:center;gap:10px;padding:10px;min-height:44px;
+  border-bottom:1px solid var(--linea);
+}
+.opcion-dest:last-child{border-bottom:0}
+.opcion-dest input{width:22px;height:22px;flex:0 0 auto;accent-color:var(--senal)}
+.opcion-dest .datos{flex:1;min-width:0}
+.opcion-dest .datos b{display:block;font-weight:600;font-size:15px}
+.opcion-dest .datos span{display:block;font-size:12px;color:var(--texto2);word-break:break-all}
+
+/* ---------- Pie de envío ---------- */
+.pie{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--fondo) 72%, transparent);
+}
+#btnEnviar{
+  width:100%;min-height:60px;border-radius:14px;
+  background:var(--senal);color:var(--sobreSenal);font-size:18px;font-weight:750;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  border:1px solid var(--senal);
+}
+#btnEnviar[data-estado="enviando"]{background:var(--superficie2);color:var(--texto2);border-color:var(--linea)}
+#btnEnviar[data-estado="enviado"]{background:var(--ok);border-color:var(--ok);color:#04150c}
+#btnEnviar[data-estado="error"]{background:var(--error);border-color:var(--error);color:#fff}
+#btnEnviar:disabled{opacity:1}
+
+/* ---------- Ajustes ---------- */
+.seccion{
+  border:1px solid var(--linea);border-radius:var(--r);background:var(--superficie);
+  margin-bottom:10px;overflow:hidden;
+}
+.seccion>summary{
+  list-style:none;cursor:pointer;padding:15px 14px;min-height:var(--alto-tactil);
+  display:flex;align-items:center;gap:10px;font-weight:650;
+}
+.seccion>summary::-webkit-details-marker{display:none}
+.seccion>summary .cuenta{margin-left:auto;font-size:13px;font-weight:600;color:var(--texto2)}
+.seccion>summary .flecha{transition:transform .18s ease;color:var(--texto2);display:grid;place-items:center}
+.seccion[open]>summary .flecha{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.seccion>summary .flecha{transition:none}}
+.cuerpo-seccion{padding:0 14px 14px;border-top:1px solid var(--linea)}
+.cuerpo-seccion>.ayuda:first-child{margin-top:12px}
+.ayuda{font-size:13px;color:var(--texto2);margin:10px 0}
+.ayuda code{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+  background:var(--superficie2);padding:2px 5px;border-radius:5px;word-break:break-all;
+}
+
+/* Lista CRUD */
+.lista{margin:12px 0 0;padding:0;list-style:none}
+.item{
+  display:flex;flex-direction:column;gap:8px;padding:12px 0;
+  border-bottom:1px solid var(--linea);
+}
+.item:last-child{border-bottom:0}
+.item .info{min-width:0}
+.item .info b{display:block;font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.item .info span{display:block;font-size:12px;color:var(--texto2);overflow-wrap:anywhere}
+.item.inactivo .info{opacity:.45}
+.acciones{display:flex;gap:8px}
+.item .mini{
+  height:44px;flex:1 1 0;display:grid;place-items:center;
+  border-radius:9px;border:1px solid var(--linea);background:var(--superficie2);color:var(--texto2);
+}
+.item .mini svg{width:19px;height:19px}
+.item .mini.on{background:var(--senal);border-color:var(--senal);color:var(--sobreSenal)}
+.item .mini:disabled{opacity:.3}
+.marca-def{
+  display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;
+  background:var(--senal);color:var(--sobreSenal);font-size:11px;font-weight:700;vertical-align:2px;
+}
+.editor{padding:12px;margin:8px 0;background:var(--superficie2);border:1px solid var(--linea);border-radius:var(--r)}
+.editor .campo:last-of-type{margin-bottom:10px}
+.editor select,.editor input{background:var(--fondo)}
+.error-campo{color:var(--error);font-size:13px;margin:6px 0 0;font-weight:600}
+.vacio-lista{margin:14px 0 4px;font-size:14px;color:var(--texto2)}
+.alta-rapida{display:flex;gap:8px;margin-top:12px}
+.alta-rapida input{flex:1}
+.alta-rapida .btn{flex:0 0 52px;width:52px;padding:0}
+
+/* Historial */
+.registro{
+  padding:12px;border:1px solid var(--linea);border-radius:var(--r);
+  background:var(--superficie);margin-bottom:8px;
+}
+.registro .asunto{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;overflow-wrap:anywhere}
+.registro .meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--texto2)}
+.estado{padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px;border:1px solid}
+.estado.enviado{color:var(--ok);border-color:var(--ok)}
+.estado.pendiente{color:var(--aviso);border-color:var(--aviso)}
+.estado.error{color:var(--error);border-color:var(--error)}
+.estado.manual{color:var(--texto2);border-color:var(--linea)}
+.registro .meta .btn{margin-left:auto}
+
+/* Aviso / franja */
+.franja{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:11px 12px;border-radius:var(--r);font-size:13.5px;
+  background:var(--superficie2);border:1px solid var(--linea);margin-bottom:14px;
+}
+.franja svg{width:18px;height:18px;flex:0 0 18px;margin-top:2px}
+.franja.aviso{border-color:var(--aviso);color:var(--texto)}
+.franja.malo{border-color:var(--error)}
+
+/* Toast */
+#toast{
+  position:fixed;left:14px;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;
+  padding:14px;border-radius:var(--r);font-weight:600;
+  background:var(--superficie2);border:1px solid var(--linea);color:var(--texto);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  transform:translateY(14px);opacity:0;pointer-events:none;transition:.18s ease;
+}
+#toast.visible{transform:none;opacity:1}
+#toast.ok{border-color:var(--ok)}
+#toast.malo{border-color:var(--error)}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+
+@media (min-width:640px){
+  .vista,.barra{max-width:560px;margin-inline:auto}
+  .pie{max-width:560px;margin-inline:auto}
+}
+</style>
+</head>
+<body>
+<header class="barra">
+  <div class="marca">
+    <b>Registro Rápido N1</b>
+    <span>Bodega Nodus</span>
+  </div>
+  <button id="btnPendientes" class="icono oculto" title="Envíos pendientes" aria-label="Envíos pendientes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="m8 7 4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+    <span class="globo" id="globoPendientes">0</span>
+  </button>
+  <button id="btnHistorial" class="icono" title="Historial" aria-label="Historial" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+  </button>
+  <button id="btnAjustes" class="icono" title="Ajustes" aria-label="Ajustes" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h4"/><path d="M12 12h8"/><circle cx="10" cy="12" r="2"/><path d="M4 18h8"/><path d="M16 18h4"/><circle cx="14" cy="18" r="2"/></svg>
+  </button>
+</header>
+
+<main>
+<!-- ============ NUEVO REGISTRO ============ -->
+<section id="vistaRegistro" class="vista">
+
+  <div id="franjaModo" class="franja oculto"></div>
+
+  <div class="campo">
+    <label class="rotulo" for="selDescripcion">Descripción de asunto</label>
+    <div class="fila">
+      <select id="selDescripcion"></select>
+      <button class="candado" id="lockDescripcion" aria-pressed="false" aria-label="Fijar descripción entre sesiones" title="Fijar"></button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label class="rotulo" for="selUsuario">Técnico</label>
+    <div class="fila">
+      <select id="selUsuario"></select>
+      <button class="candado" id="lockUsuario" aria-pressed="false" aria-label="Fijar técnico entre sesiones" title="Fijar"></button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label class="rotulo" for="selCategoria">Categoría del trabajo</label>
+    <select id="selCategoria" class="vacio"></select>
+  </div>
+
+  <div class="etiqueta-asunto">
+    <div class="tit">Asunto que llegará al ticket</div>
+    <div id="previewAsunto" class="pendiente">Elegí una categoría</div>
+  </div>
+
+  <div class="campo">
+    <label class="rotulo" for="txtDescripcion">Descripción del trabajo</label>
+    <textarea id="txtDescripcion" placeholder="Dictá o escribí qué se hizo" enterkeyhint="done"></textarea>
+    <div class="btn-grupo">
+      <button class="btn ancho" id="btnDictado" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+        <span id="rotDictado">Dictar</span>
+        <span class="crono oculto" id="crono">0:00</span>
+      </button>
+    </div>
+    <p class="ayuda oculto" id="avisoDictado"></p>
+  </div>
+
+  <div class="campo">
+    <label class="rotulo">Destinatarios</label>
+    <div class="chips" id="chipsDest" role="button" tabindex="0" aria-expanded="false" aria-controls="panelDest"></div>
+    <div class="selector-dest oculto" id="panelDest"></div>
+  </div>
+</section>
+
+<!-- ============ HISTORIAL ============ -->
+<section id="vistaHistorial" class="vista oculto">
+  <div class="encabezado-vista">
+    <button class="icono" data-volver aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h2>Historial</h2>
+  </div>
+  <div id="listaHistorial"></div>
+  <div class="btn-grupo" id="accionesHistorial"></div>
+</section>
+
+<!-- ============ AJUSTES ============ -->
+<section id="vistaAjustes" class="vista oculto">
+  <div class="encabezado-vista">
+    <button class="icono" data-volver aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h2>Ajustes</h2>
+  </div>
+
+  <details class="seccion" id="secUsuarios">
+    <summary>Usuarios (técnicos) <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion" data-cuerpo="usuarios"></div>
+  </details>
+
+  <details class="seccion" id="secCategorias">
+    <summary>Categorías de trabajo <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion" data-cuerpo="categorias"></div>
+  </details>
+
+  <details class="seccion" id="secDescripciones">
+    <summary>Descripciones de asunto <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion" data-cuerpo="descripciones"></div>
+  </details>
+
+  <details class="seccion" id="secDestinatarios">
+    <summary>Destinatarios <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion" data-cuerpo="destinatarios"></div>
+  </details>
+
+  <details class="seccion" id="secAsunto">
+    <summary>Formato del asunto <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion">
+      <p class="ayuda">Plantilla fija: <code>{descripcion}{sep}{codigo}{sep}{categoria}</code>. Los segmentos vacíos se omiten junto con su separador.</p>
+      <div class="campo">
+        <label class="rotulo" for="inpSeparador">Separador</label>
+        <input type="text" id="inpSeparador" maxlength="10" spellcheck="false">
+      </div>
+      <p class="ayuda">Ejemplo con los valores actuales:<br><code id="ejemploAsunto"></code></p>
+      <div class="campo">
+        <label class="rotulo" for="inpFirma">Firma al pie del correo</label>
+        <input type="text" id="inpFirma" maxlength="80">
+      </div>
+    </div>
+  </details>
+
+  <details class="seccion" id="secCuenta">
+    <summary>Cuenta y modo de envío <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion">
+      <div class="campo">
+        <label class="rotulo" for="selModo">Cómo se envía el correo</label>
+        <select id="selModo">
+          <option value="auto">Automático — Graph si hay sesión, si no Outlook</option>
+          <option value="graph">Microsoft Graph (envía solo, sin pasar por Outlook)</option>
+          <option value="mailto">Outlook por mailto: (sin adjunto, confirmás vos)</option>
+        </select>
+      </div>
+      <p class="ayuda">Graph envía el correo solo, sin abrir Outlook. Necesita un registro de aplicación en Azure. Pegá aquí el <b>Application (client) ID</b> y el <b>Directory (tenant) ID</b>; se guardan solo en este teléfono.</p>
+      <div class="campo">
+        <label class="rotulo" for="inpClientId">Client ID</label>
+        <input type="text" id="inpClientId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
+      </div>
+      <div class="campo">
+        <label class="rotulo" for="inpTenantId">Tenant ID</label>
+        <input type="text" id="inpTenantId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
+      </div>
+      <p class="ayuda">Redirect URI que hay que registrar en Azure (tipo SPA):<br><code id="redirectUri"></code></p>
+      <div id="estadoCuenta" class="franja"></div>
+      <div class="btn-grupo">
+        <button class="btn" id="btnConectar">Conectar cuenta</button>
+        <button class="btn" id="btnDesconectar">Cerrar sesión</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="seccion" id="secRespaldo">
+    <summary>Respaldo y datos <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion">
+      <p class="ayuda">Exportá la configuración completa en un archivo <code>.json</code> para respaldarla o pasarla a otro técnico del equipo.</p>
+      <div class="btn-grupo">
+        <button class="btn" id="btnExportar">Exportar</button>
+        <button class="btn" id="btnImportar">Importar</button>
+      </div>
+      <input type="file" id="archivoImportar" accept="application/json,.json" class="oculto">
+      <p class="ayuda" id="infoAlmacen"></p>
+      <div class="btn-grupo">
+        <button class="btn chico" id="btnVaciarCola">Vaciar cola de pendientes</button>
+        <button class="btn chico" id="btnBorrarHistorial">Borrar historial</button>
+      </div>
+    </div>
+  </details>
+
+  <p class="ayuda" id="pieVersion"></p>
+</section>
+</main>
+
+<div class="pie" id="pieEnvio">
+  <button id="btnEnviar" data-estado="listo">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg>
+    <span id="rotEnviar">Enviar registro</span>
+  </button>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   Registro Rápido N1 · Nodus
+   PWA autocontenida. Sin backend. Datos en localStorage + IndexedDB.
+   ========================================================================= */
+
+const NS = "rrn1:v1:";
+const VERSION_APP = "1.1.0";
+const LIMITE_HISTORIAL = 50;
+
+/* ---------------------------- Utilidades ---------------------------- */
+
+const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
+
+function uid(pre) {
+  return (pre || "id") + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function normalizarEspacios(s) {
+  return String(s || "").replace(/[ \t]+/g, " ").trim();
+}
+
+function sinAcentos(s) {
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function emailValido(v) {
+  return /^[^\s@,;]+@[^\s@,;]+\.[a-zA-Z]{2,}$/.test(String(v || "").trim());
+}
+
+function fmtFecha(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+function selloArchivo(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return "" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+function fechaLegible(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+function vibrar(patron) {
+  try { if (navigator.vibrate) navigator.vibrate(patron); } catch (e) { /* no soportado */ }
+}
+
+let tempToast = null;
+function toast(msg, tipo) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "visible" + (tipo ? " " + tipo : "");
+  clearTimeout(tempToast);
+  tempToast = setTimeout(() => { t.className = ""; }, 3800);
+}
+
+const ICO = {
+  candadoAbierto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>',
+  candadoCerrado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  lapiz: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
+  arriba: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>',
+  abajo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></svg>',
+  visible: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  oculto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16"/><path d="M9.9 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.7M6.6 7.1C3.9 8.8 2 11 2 11s3.6 6 10 6c1.4 0 2.6-.3 3.7-.7"/></svg>',
+  estrella: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l2.4 5 5.6.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.6-.8z"/></svg>',
+  mas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.2v.2"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>'
+};
+
+/* ---------------------- localStorage con degradación ---------------------- */
+
+let almacenOk = true;
+const almacen = {
+  leer(clave, porDefecto) {
+    try {
+      const crudo = localStorage.getItem(NS + clave);
+      if (crudo == null) return porDefecto;
+      return JSON.parse(crudo);
+    } catch (e) {
+      console.warn("No se pudo leer", clave, e);
+      return porDefecto;
+    }
+  },
+  escribir(clave, valor) {
+    try {
+      localStorage.setItem(NS + clave, JSON.stringify(valor));
+      if (!almacenOk) { almacenOk = true; }
+      return true;
+    } catch (e) {
+      almacenOk = false;
+      console.warn("No se pudo guardar", clave, e);
+      toast("El teléfono no dejó guardar los cambios. Liberá espacio o desactivá el modo privado.", "malo");
+      return false;
+    }
+  },
+  borrar(clave) {
+    try { localStorage.removeItem(NS + clave); } catch (e) { /* nada */ }
+  }
+};
+
+/* ------------------------------ IndexedDB ------------------------------ */
+
+let bdPromesa = null;
+function abrirBD() {
+  if (bdPromesa) return bdPromesa;
+  bdPromesa = new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) { reject(new Error("Sin IndexedDB")); return; }
+    const req = indexedDB.open("rrn1", 1);
+    req.onupgradeneeded = () => {
+      const bd = req.result;
+      if (!bd.objectStoreNames.contains("cola")) bd.createObjectStore("cola", { keyPath: "id" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return bdPromesa;
+}
+
+function tx(almacenNombre, modo, fn) {
+  return abrirBD().then((bd) => new Promise((resolve, reject) => {
+    const t = bd.transaction(almacenNombre, modo);
+    const st = t.objectStore(almacenNombre);
+    let resultado;
+    try { resultado = fn(st); } catch (e) { reject(e); return; }
+    t.oncomplete = () => resolve(resultado && resultado.result !== undefined ? resultado.result : resultado);
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error);
+  }));
+}
+
+const bd = {
+  guardar: (almacenNombre, obj) => tx(almacenNombre, "readwrite", (st) => st.put(obj)),
+  obtener: (almacenNombre, id) => tx(almacenNombre, "readonly", (st) => st.get(id)),
+  borrar: (almacenNombre, id) => tx(almacenNombre, "readwrite", (st) => st.delete(id)),
+  todos: (almacenNombre) => tx(almacenNombre, "readonly", (st) => st.getAll()),
+  vaciar: (almacenNombre) => tx(almacenNombre, "readwrite", (st) => st.clear())
+};
+
+/* ------------------------------- Estado -------------------------------- */
+
+const PREFS_DEF = {
+  separador: " - ",
+  firma: "Registrado desde Registro Rápido N1",
+  descripcionFijada: "",
+  usuarioFijado: "",
+  fijarDescripcion: false,
+  fijarUsuario: false,
+  modoEnvio: "auto",
+  clientId: "",
+  tenantId: ""
+};
+
+const estado = {
+  usuarios: almacen.leer("usuarios", null),
+  categorias: almacen.leer("categorias", null),
+  descripciones: almacen.leer("descripciones", null),
+  destinatarios: almacen.leer("destinatarios", null),
+  prefs: Object.assign({}, PREFS_DEF, almacen.leer("prefs", {})),
+  historial: almacen.leer("historial", []),
+  pendientes: 0
+};
+
+// Semilla mínima solo en el primer arranque (catálogos nunca vistos).
+if (estado.usuarios === null) estado.usuarios = [];
+if (estado.destinatarios === null) estado.destinatarios = [];
+if (estado.descripciones === null) {
+  estado.descripciones = [
+    { id: uid("d"), texto: "Soporte Bodega Nodus", porDefecto: true, activo: true },
+    { id: uid("d"), texto: "Mantenimiento Preventivo", porDefecto: false, activo: true }
+  ];
+}
+if (estado.categorias === null) {
+  estado.categorias = [
+    { id: uid("c"), nombre: "Impresoras Zebra", orden: 1, activo: true },
+    { id: uid("c"), nombre: "Terminales RF", orden: 2, activo: true },
+    { id: uid("c"), nombre: "Red / WiFi", orden: 3, activo: true }
+  ];
+}
+
+function guardar(clave) {
+  almacen.escribir(clave, estado[clave]);
+}
+function guardarTodo() {
+  ["usuarios", "categorias", "descripciones", "destinatarios", "prefs", "historial"].forEach(guardar);
+}
+
+function activos(lista) { return lista.filter((x) => x.activo !== false); }
+function porId(lista, id) { return lista.find((x) => x.id === id) || null; }
+
+/* ---------------------- Composición del asunto ------------------------- */
+
+function componerAsunto(partes, separador) {
+  const sep = separador == null ? estado.prefs.separador : separador;
+  const limpias = partes
+    .map((p) => normalizarEspacios(p))
+    .filter((p) => p.length > 0);
+  return normalizarEspacios(limpias.join(sep));
+}
+
+function sugerirCodigo(nombre, listaExistente, idActual) {
+  const limpio = sinAcentos(nombre).toUpperCase().replace(/[^A-Z\s]/g, " ");
+  const palabras = limpio.split(/\s+/).filter(Boolean);
+  let iniciales = palabras.map((p) => p[0]).join("").slice(0, 3);
+  if (!iniciales) iniciales = "XX";
+  let base = "N1-" + iniciales;
+  let cand = base;
+  let n = 2;
+  const usados = (listaExistente || []).filter((u) => u.id !== idActual).map((u) => String(u.codigo || "").toUpperCase());
+  while (usados.indexOf(cand.toUpperCase()) !== -1) { cand = base + n; n++; }
+  return cand;
+}
+
+/* =======================================================================
+   PANTALLA PRINCIPAL — NUEVO REGISTRO
+   ======================================================================= */
+
+const el = {
+  selDescripcion: $("#selDescripcion"),
+  selUsuario: $("#selUsuario"),
+  selCategoria: $("#selCategoria"),
+  lockDescripcion: $("#lockDescripcion"),
+  lockUsuario: $("#lockUsuario"),
+  preview: $("#previewAsunto"),
+  texto: $("#txtDescripcion"),
+  chips: $("#chipsDest"),
+  panelDest: $("#panelDest"),
+  btnEnviar: $("#btnEnviar"),
+  rotEnviar: $("#rotEnviar"),
+  franjaModo: $("#franjaModo")
+};
+
+let seleccionDest = null;   // Set de ids elegidos solo para este envío
+
+function opcion(valor, texto, sel) {
+  return '<option value="' + esc(valor) + '"' + (sel ? " selected" : "") + ">" + esc(texto) + "</option>";
+}
+
+function pintarSelectores() {
+  const desc = activos(estado.descripciones);
+  const usus = activos(estado.usuarios);
+  const cats = activos(estado.categorias).slice().sort((a, b) => (a.orden || 0) - (b.orden || 0));
+
+  // --- Descripción de asunto ---
+  let valDesc = "";
+  if (estado.prefs.fijarDescripcion && porId(desc, estado.prefs.descripcionFijada)) {
+    valDesc = estado.prefs.descripcionFijada;
+  } else {
+    const pd = desc.find((d) => d.porDefecto);
+    valDesc = pd ? pd.id : (desc[0] ? desc[0].id : "");
+  }
+  el.selDescripcion.innerHTML = opcion("", "— Sin descripción —", !valDesc) +
+    desc.map((d) => opcion(d.id, d.texto, d.id === valDesc)).join("");
+
+  // --- Técnico ---
+  let valUsu = "";
+  if (estado.prefs.fijarUsuario && porId(usus, estado.prefs.usuarioFijado)) {
+    valUsu = estado.prefs.usuarioFijado;
+  } else if (usus.length === 1) {
+    valUsu = usus[0].id;
+  }
+  el.selUsuario.innerHTML = opcion("", usus.length ? "— Sin técnico —" : "— Agregá un técnico en Ajustes —", !valUsu) +
+    usus.map((u) => opcion(u.id, u.nombre + " (" + u.codigo + ")", u.id === valUsu)).join("");
+
+  // --- Categoría: siempre vacía al iniciar ---
+  el.selCategoria.innerHTML = opcion("", cats.length ? "Elegí una categoría" : "— Agregá categorías en Ajustes —", true) +
+    cats.map((c) => opcion(c.id, c.nombre, false)).join("");
+
+  pintarCandados();
+  actualizarPreview();
+}
+
+function pintarCandados() {
+  el.lockDescripcion.innerHTML = estado.prefs.fijarDescripcion ? ICO.candadoCerrado : ICO.candadoAbierto;
+  el.lockDescripcion.setAttribute("aria-pressed", String(!!estado.prefs.fijarDescripcion));
+  el.lockUsuario.innerHTML = estado.prefs.fijarUsuario ? ICO.candadoCerrado : ICO.candadoAbierto;
+  el.lockUsuario.setAttribute("aria-pressed", String(!!estado.prefs.fijarUsuario));
+}
+
+function asuntoActual() {
+  const d = porId(estado.descripciones, el.selDescripcion.value);
+  const u = porId(estado.usuarios, el.selUsuario.value);
+  const c = porId(estado.categorias, el.selCategoria.value);
+  return componerAsunto([d ? d.texto : "", u ? u.codigo : "", c ? c.nombre : ""]);
+}
+
+function actualizarPreview() {
+  const a = asuntoActual();
+  el.selCategoria.classList.toggle("vacio", !el.selCategoria.value);
+  if (a) {
+    el.preview.textContent = a;
+    el.preview.classList.remove("pendiente");
+  } else {
+    el.preview.textContent = "Elegí una categoría";
+    el.preview.classList.add("pendiente");
+  }
+  actualizarFranja();
+}
+
+/* ------------------------- Destinatarios del envío ------------------------- */
+
+function destinatariosPorDefecto() {
+  return new Set(activos(estado.destinatarios).filter((r) => r.porDefecto).map((r) => r.id));
+}
+
+function pintarChips() {
+  if (!seleccionDest) seleccionDest = destinatariosPorDefecto();
+  const disponibles = activos(estado.destinatarios);
+  const elegidos = disponibles.filter((r) => seleccionDest.has(r.id));
+
+  if (!disponibles.length) {
+    el.chips.innerHTML = '<span class="chip apagado">Sin destinatarios cargados</span>';
+  } else if (!elegidos.length) {
+    el.chips.innerHTML = '<span class="chip apagado">Ninguno elegido</span>';
+  } else {
+    el.chips.innerHTML = elegidos.map((r) =>
+      '<span class="chip"><b>' + esc(r.tipo.toUpperCase()) + "</b>" + esc(r.nombre) + "</span>"
+    ).join("");
+  }
+
+  el.panelDest.innerHTML = disponibles.length
+    ? disponibles.map((r) =>
+        '<label class="opcion-dest"><input type="checkbox" data-dest="' + esc(r.id) + '"' +
+        (seleccionDest.has(r.id) ? " checked" : "") + '><span class="datos"><b>' + esc(r.nombre) +
+        ' <span class="marca-def">' + esc(r.tipo.toUpperCase()) + '</span></b><span>' + esc(r.email) +
+        "</span></span></label>"
+      ).join("")
+    : '<p class="ayuda" style="padding:10px">Agregá destinatarios en Ajustes para poder enviar.</p>';
+
+  actualizarFranja();
+}
+
+function alternarPanelDest() {
+  const abierto = el.panelDest.classList.toggle("oculto") === false;
+  el.chips.setAttribute("aria-expanded", String(abierto));
+}
+
+el.chips.addEventListener("click", alternarPanelDest);
+el.chips.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); alternarPanelDest(); }
+});
+el.panelDest.addEventListener("change", (ev) => {
+  const cb = ev.target.closest("input[data-dest]");
+  if (!cb) return;
+  if (cb.checked) seleccionDest.add(cb.dataset.dest); else seleccionDest.delete(cb.dataset.dest);
+  pintarChips();
+});
+
+/* ------------------------------ Franja de aviso ---------------------------- */
+
+function modoEfectivo() {
+  const p = estado.prefs;
+  if (p.modoEnvio === "mailto") return "mailto";
+  if (p.modoEnvio === "graph") return "graph";
+  return (p.clientId && p.tenantId) ? "graph" : "mailto";
+}
+
+function actualizarFranja() {
+  const avisos = [];
+  if (!activos(estado.destinatarios).length) avisos.push("Todavía no hay destinatarios. Agregalos en Ajustes.");
+  else if (seleccionDest && seleccionDest.size === 0) avisos.push("No hay ningún destinatario marcado para este envío.");
+  if (!activos(estado.usuarios).length) avisos.push("Cargá tu usuario técnico en Ajustes para que el asunto lleve tu código.");
+  if (modoEfectivo() === "mailto") avisos.push("Modo Outlook: el correo se arma acá pero el envío lo confirmás vos en Outlook.");
+  if (!almacenOk) avisos.push("El almacenamiento del navegador está bloqueado: los cambios no se conservarán.");
+
+  if (!avisos.length) { el.franjaModo.classList.add("oculto"); return; }
+  el.franjaModo.className = "franja aviso";
+  el.franjaModo.innerHTML = ICO.alerta + "<div>" + avisos.map(esc).join("<br>") + "</div>";
+}
+
+/* ------------------------------- Candados ---------------------------------- */
+
+el.lockDescripcion.addEventListener("click", () => {
+  const p = estado.prefs;
+  p.fijarDescripcion = !p.fijarDescripcion;
+  p.descripcionFijada = p.fijarDescripcion ? el.selDescripcion.value : "";
+  guardar("prefs"); pintarCandados();
+  toast(p.fijarDescripcion ? "Descripción fijada para las próximas aperturas." : "Descripción liberada.");
+});
+
+el.lockUsuario.addEventListener("click", () => {
+  const p = estado.prefs;
+  p.fijarUsuario = !p.fijarUsuario;
+  p.usuarioFijado = p.fijarUsuario ? el.selUsuario.value : "";
+  guardar("prefs"); pintarCandados();
+  toast(p.fijarUsuario ? "Técnico fijado para las próximas aperturas." : "Técnico liberado.");
+});
+
+el.selDescripcion.addEventListener("change", () => {
+  if (estado.prefs.fijarDescripcion) { estado.prefs.descripcionFijada = el.selDescripcion.value; guardar("prefs"); }
+  actualizarPreview();
+});
+el.selUsuario.addEventListener("change", () => {
+  if (estado.prefs.fijarUsuario) { estado.prefs.usuarioFijado = el.selUsuario.value; guardar("prefs"); }
+  actualizarPreview();
+});
+el.selCategoria.addEventListener("change", actualizarPreview);
+el.texto.addEventListener("input", () => { textoBase = el.texto.value; finalAcum = ""; });
+
+/* =======================================================================
+   VOZ — la nota de voz se transcribe en vivo a texto; no se guarda audio.
+   SpeechRecognition solo escucha el micrófono en directo: no puede
+   transcribir un archivo ya grabado sin un servicio externo, y por eso
+   la app no graba ni adjunta nada.
+   ======================================================================= */
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const IDIOMAS = ["es-GT", "es-419", "es-ES"];
+let idiomaIdx = 0;
+let recon = null, deseaDictar = false, textoBase = "", finalAcum = "";
+let segDic = 0, tDic = null;
+
+if (!SR) {
+  $("#btnDictado").classList.add("oculto");
+  const aviso = $("#avisoDictado");
+  aviso.textContent = "Este navegador no transcribe voz. Escribí la descripción a mano.";
+  aviso.classList.remove("oculto");
+}
+
+function pintarCronoDictado() {
+  const m = Math.floor(segDic / 60), s2 = segDic % 60;
+  $("#crono").textContent = m + ":" + String(s2).padStart(2, "0");
+}
+
+function iniciarDictado() {
+  if (!SR) return;
+  textoBase = el.texto.value;
+  finalAcum = "";
+  recon = new SR();
+  recon.lang = IDIOMAS[idiomaIdx];
+  recon.continuous = true;
+  recon.interimResults = true;
+  recon.maxAlternatives = 1;
+
+  recon.onresult = (ev) => {
+    let interino = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const t = ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) finalAcum += t.trim() + " ";
+      else interino += t;
+    }
+    const partes = [textoBase.trim(), (finalAcum + interino).trim()].filter(Boolean);
+    el.texto.value = partes.join(textoBase.trim() ? "\n" : "");
+  };
+
+  recon.onerror = (ev) => {
+    if (ev.error === "language-not-supported" && idiomaIdx < IDIOMAS.length - 1) {
+      idiomaIdx++;
+      if (deseaDictar) { try { recon.stop(); } catch (e) {} setTimeout(iniciarDictado, 150); }
+      return;
+    }
+    if (ev.error === "no-speech" || ev.error === "aborted") return;
+    deseaDictar = false;
+    pintarDictado();
+    if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      toast("El navegador no dio permiso de micrófono. Habilitalo en los ajustes del sitio.", "malo");
+    } else if (ev.error === "network") {
+      toast("El dictado necesita red. Usá la nota de voz o escribí.", "malo");
+    } else {
+      toast("El dictado se detuvo: " + ev.error, "malo");
+    }
+  };
+
+  recon.onend = () => {
+    if (deseaDictar) {
+      textoBase = el.texto.value;
+      finalAcum = "";
+      try { recon.start(); } catch (e) { deseaDictar = false; pintarDictado(); }
+    } else {
+      pintarDictado();
+    }
+  };
+
+  try {
+    recon.start();
+    deseaDictar = true;
+    segDic = 0;
+    pintarCronoDictado();
+    clearInterval(tDic);
+    tDic = setInterval(() => { segDic++; pintarCronoDictado(); }, 1000);
+    pintarDictado();
+    vibrar(20);
+  } catch (e) {
+    deseaDictar = false;
+    pintarDictado();
+    toast("No se pudo iniciar el dictado.", "malo");
+  }
+}
+
+function detenerDictado() {
+  deseaDictar = false;
+  if (recon) { try { recon.stop(); } catch (e) { /* ya detenido */ } }
+  pintarDictado();
+}
+
+function pintarDictado() {
+  const b = $("#btnDictado");
+  b.classList.toggle("activo", deseaDictar);
+  b.classList.toggle("grabando", deseaDictar);
+  b.setAttribute("aria-pressed", String(deseaDictar));
+  $("#rotDictado").textContent = deseaDictar ? "Detener dictado" : "Dictar";
+  $("#crono").classList.toggle("oculto", !deseaDictar);
+  if (!deseaDictar) { clearInterval(tDic); tDic = null; }
+}
+
+$("#btnDictado").addEventListener("click", () => {
+  if (deseaDictar) detenerDictado(); else iniciarDictado();
+});
+
+/* =======================================================================
+   AJUSTES — catálogos CRUD
+   ======================================================================= */
+
+const DEFS = {
+  usuarios: {
+    titulo: "técnico",
+    vacio: "Todavía no hay técnicos. Agregá el tuyo para que el asunto lleve tu código.",
+    ayuda: "El código lo escribís vos; se usa tal cual en el asunto. Debe ser único.",
+    principal: (u) => u.nombre,
+    secundario: (u) => u.codigo,
+    campos: [
+      { k: "nombre", et: "Nombre", tipo: "text" },
+      { k: "codigo", et: "Código", tipo: "text", sugerir: true, placeholder: "N1-ARM" }
+    ],
+    nuevo: () => ({ id: uid("u"), nombre: "", codigo: "", activo: true }),
+    validar(v, id, lista) {
+      const e = {};
+      if (!normalizarEspacios(v.nombre)) e.nombre = "Escribí el nombre.";
+      const cod = normalizarEspacios(v.codigo).replace(/\s+/g, "");
+      if (!cod) e.codigo = "Escribí el código.";
+      else if (!/^[A-Za-z0-9][A-Za-z0-9._-]{1,19}$/.test(cod)) e.codigo = "Usá 2 a 20 caracteres: letras, números, punto, guion o guion bajo.";
+      else if (lista.some((u) => u.id !== id && String(u.codigo).toLowerCase() === cod.toLowerCase())) e.codigo = "Ese código ya lo usa otro técnico.";
+      return { errores: e, valores: { nombre: normalizarEspacios(v.nombre), codigo: cod } };
+    }
+  },
+  categorias: {
+    titulo: "categoría",
+    vacio: "Sin categorías. Agregá las que uses en piso.",
+    ayuda: "Escribí el nombre y tocá + para agregarla.",
+    altaRapida: "Nombre de la categoría",
+    principal: (c) => c.nombre,
+    secundario: () => "",
+    campos: [{ k: "nombre", et: "Nombre", tipo: "text" }],
+    nuevo: () => ({ id: uid("c"), nombre: "", orden: 0, activo: true }),
+    validar(v, id, lista) {
+      const e = {};
+      const n = normalizarEspacios(v.nombre);
+      if (!n) e.nombre = "Escribí el nombre.";
+      else if (lista.some((c) => c.id !== id && sinAcentos(c.nombre).toLowerCase() === sinAcentos(n).toLowerCase())) e.nombre = "Ya existe una categoría con ese nombre.";
+      return { errores: e, valores: { nombre: n } };
+    }
+  },
+  descripciones: {
+    titulo: "descripción",
+    vacio: "Sin descripciones. Es el prefijo fijo del asunto.",
+    ayuda: "La marcada con estrella se carga sola al abrir la app.",
+    altaRapida: "Texto de la descripción",
+    principal: (d) => d.texto,
+    secundario: () => "",
+    defecto: "unico",
+    campos: [{ k: "texto", et: "Texto", tipo: "text" }],
+    nuevo: () => ({ id: uid("d"), texto: "", porDefecto: false, activo: true }),
+    validar(v, id, lista) {
+      const e = {};
+      const t = normalizarEspacios(v.texto);
+      if (!t) e.texto = "Escribí el texto.";
+      else if (lista.some((d) => d.id !== id && sinAcentos(d.texto).toLowerCase() === sinAcentos(t).toLowerCase())) e.texto = "Ya existe esa descripción.";
+      return { errores: e, valores: { texto: t } };
+    }
+  },
+  destinatarios: {
+    titulo: "destinatario",
+    vacio: "Sin destinatarios. Agregá al menos la dirección de la mesa de servicio.",
+    ayuda: "Podés marcar con estrella varios destinos por defecto.",
+    defecto: "varios",
+    principal: (r) => r.nombre,
+    secundario: (r) => r.email + " · " + r.tipo,
+    campos: [
+      { k: "nombre", et: "Nombre", tipo: "text", placeholder: "Mesa de Servicio" },
+      { k: "email", et: "Correo", tipo: "email", placeholder: "soporte@empresa.com" },
+      { k: "tipo", et: "Enviar como", tipo: "select", opciones: [["para", "Para"], ["cc", "CC"], ["cco", "CCO"]] }
+    ],
+    nuevo: () => ({ id: uid("r"), nombre: "", email: "", tipo: "para", porDefecto: true, activo: true }),
+    validar(v, id, lista) {
+      const e = {};
+      if (!normalizarEspacios(v.nombre)) e.nombre = "Escribí un nombre para reconocerlo.";
+      const em = String(v.email || "").trim();
+      if (!em) e.email = "Escribí el correo.";
+      else if (!emailValido(em)) e.email = "Ese correo no tiene un formato válido.";
+      else if (lista.some((r) => r.id !== id && String(r.email).toLowerCase() === em.toLowerCase() && r.tipo === v.tipo)) e.email = "Ese correo ya está cargado con el mismo tipo.";
+      return { errores: e, valores: { nombre: normalizarEspacios(v.nombre), email: em, tipo: v.tipo } };
+    }
+  }
+};
+
+let editando = null;   // { clave, id, errores, borrador }
+
+function usadoEnHistorial(clave, id) {
+  const campo = { usuarios: "usuarioId", categorias: "categoriaId", descripciones: "descripcionId" }[clave];
+  if (!campo) return false;
+  return estado.historial.some((h) => h.datos && h.datos[campo] === id);
+}
+
+function pintarCatalogo(clave) {
+  const def = DEFS[clave];
+  const lista = estado[clave];
+  const cuerpo = $('[data-cuerpo="' + clave + '"]');
+  if (!cuerpo) return;
+
+  let html = '<p class="ayuda">' + esc(def.ayuda) + "</p>";
+
+  if (def.altaRapida) {
+    html += '<div class="alta-rapida">' +
+      '<input type="text" data-rapida="' + clave + '" placeholder="' + esc(def.altaRapida) + '" enterkeyhint="done">' +
+      '<button class="btn senal" data-add-rapida="' + clave + '" aria-label="Agregar">' + ICO.mas + "</button></div>";
+  }
+
+  if (editando && editando.clave === clave && editando.id === "nuevo") html += editorHTML(clave, null);
+
+  html += '<ul class="lista">';
+  if (!lista.length) html += '<li class="vacio-lista">' + esc(def.vacio) + "</li>";
+
+  lista.forEach((it, i) => {
+    if (editando && editando.clave === clave && editando.id === it.id) {
+      html += "<li>" + editorHTML(clave, it) + "</li>";
+      return;
+    }
+    const inactivo = it.activo === false;
+    const marca = def.defecto && it.porDefecto ? '<span class="marca-def">Por defecto</span>' : "";
+    const sec = def.secundario(it);
+    html += '<li class="item' + (inactivo ? " inactivo" : "") + '">' +
+      '<div class="info"><b>' + esc(def.principal(it)) + marca + "</b>" +
+      (sec ? "<span>" + esc(sec) + "</span>" : "") + "</div>" +
+      '<div class="acciones">' +
+      '<button class="mini" data-mover="-1" data-clave="' + clave + '" data-id="' + esc(it.id) + '" aria-label="Subir"' + (i === 0 ? " disabled" : "") + ">" + ICO.arriba + "</button>" +
+      '<button class="mini" data-mover="1" data-clave="' + clave + '" data-id="' + esc(it.id) + '" aria-label="Bajar"' + (i === lista.length - 1 ? " disabled" : "") + ">" + ICO.abajo + "</button>" +
+      (def.defecto ? '<button class="mini' + (it.porDefecto ? " on" : "") + '" data-defecto="' + clave + '" data-id="' + esc(it.id) + '" aria-label="Marcar por defecto">' + ICO.estrella + "</button>" : "") +
+      '<button class="mini' + (inactivo ? "" : " on") + '" data-activo="' + clave + '" data-id="' + esc(it.id) + '" aria-label="' + (inactivo ? "Activar" : "Desactivar") + '">' + (inactivo ? ICO.oculto : ICO.visible) + "</button>" +
+      '<button class="mini" data-editar="' + clave + '" data-id="' + esc(it.id) + '" aria-label="Editar">' + ICO.lapiz + "</button>" +
+      "</div></li>";
+  });
+  html += "</ul>";
+
+  if (!def.altaRapida) {
+    html += '<div class="btn-grupo"><button class="btn" data-nuevo="' + clave + '">Agregar ' + esc(def.titulo) + "</button></div>";
+  }
+
+  cuerpo.innerHTML = html;
+  const cuenta = $("summary .cuenta", cuerpo.parentElement);
+  if (cuenta) cuenta.textContent = activos(lista).length + " activos";
+}
+
+function editorHTML(clave, item) {
+  const def = DEFS[clave];
+  const b = (editando && editando.borrador) || {};
+  const err = (editando && editando.errores) || {};
+  let h = '<div class="editor" data-editor="' + clave + '">';
+  def.campos.forEach((c) => {
+    const valor = b[c.k] !== undefined ? b[c.k] : (item ? item[c.k] : "");
+    h += '<div class="campo"><label class="rotulo" for="ed_' + c.k + '">' + esc(c.et) + "</label>";
+    if (c.tipo === "select") {
+      h += '<select id="ed_' + c.k + '" data-campo="' + c.k + '">' +
+        c.opciones.map((o) => opcion(o[0], o[1], o[0] === (valor || "para"))).join("") + "</select>";
+    } else if (c.sugerir) {
+      h += '<div class="fila"><input type="text" id="ed_' + c.k + '" data-campo="' + c.k + '" value="' + esc(valor) +
+        '" placeholder="' + esc(c.placeholder || "") + '" spellcheck="false" autocapitalize="characters">' +
+        '<button class="btn chico" data-sugerir="' + clave + '" style="flex:0 0 auto">Sugerir</button></div>';
+    } else {
+      h += '<input type="' + (c.tipo === "email" ? "email" : "text") + '" id="ed_' + c.k + '" data-campo="' + c.k +
+        '" value="' + esc(valor) + '" placeholder="' + esc(c.placeholder || "") + '"' +
+        (c.tipo === "email" ? ' inputmode="email" spellcheck="false" autocapitalize="off"' : "") + ">";
+    }
+    if (err[c.k]) h += '<p class="error-campo">' + esc(err[c.k]) + "</p>";
+    h += "</div>";
+  });
+  h += '<div class="btn-grupo"><button class="btn senal" data-guardar="' + clave + '">Guardar</button>' +
+    '<button class="btn" data-cancelar="1">Cancelar</button></div>';
+  if (item) {
+    h += '<div class="btn-grupo"><button class="btn chico" data-eliminar="' + clave + '" data-id="' + esc(item.id) + '">Eliminar</button></div>';
+  }
+  h += "</div>";
+  return h;
+}
+
+function leerEditor(clave) {
+  const cont = $('[data-editor="' + clave + '"]');
+  const v = {};
+  if (!cont) return v;
+  $$("[data-campo]", cont).forEach((i) => { v[i.dataset.campo] = i.value; });
+  return v;
+}
+
+function guardarItem(clave) {
+  const def = DEFS[clave];
+  const lista = estado[clave];
+  const crudo = leerEditor(clave);
+  const id = editando.id === "nuevo" ? null : editando.id;
+  const res = def.validar(crudo, id, lista);
+
+  if (Object.keys(res.errores).length) {
+    editando.errores = res.errores;
+    editando.borrador = crudo;
+    pintarCatalogo(clave);
+    return;
+  }
+
+  if (id) {
+    Object.assign(porId(lista, id), res.valores);
+  } else {
+    const nuevo = Object.assign(def.nuevo(), res.valores);
+    if (def.defecto === "unico" && !lista.some((x) => x.porDefecto)) nuevo.porDefecto = true;
+    lista.push(nuevo);
+  }
+  normalizarOrden(clave);
+  guardar(clave);
+  editando = null;
+  pintarCatalogo(clave);
+  refrescarPrincipal();
+  toast("Guardado.", "ok");
+}
+
+function normalizarOrden(clave) {
+  if (clave === "categorias") estado.categorias.forEach((c, i) => { c.orden = i + 1; });
+}
+
+function altaRapida(clave) {
+  const inp = $('[data-rapida="' + clave + '"]');
+  if (!inp) return;
+  const def = DEFS[clave];
+  const campo = def.campos[0].k;
+  const v = {}; v[campo] = inp.value;
+  const res = def.validar(v, null, estado[clave]);
+  if (Object.keys(res.errores).length) {
+    toast(res.errores[campo], "malo");
+    inp.focus();
+    return;
+  }
+  const nuevo = Object.assign(def.nuevo(), res.valores);
+  if (def.defecto === "unico" && !estado[clave].some((x) => x.porDefecto)) nuevo.porDefecto = true;
+  estado[clave].push(nuevo);
+  normalizarOrden(clave);
+  guardar(clave);
+  inp.value = "";
+  pintarCatalogo(clave);
+  refrescarPrincipal();
+  const nuevoInp = $('[data-rapida="' + clave + '"]');
+  if (nuevoInp) nuevoInp.focus();
+  toast("Agregado.", "ok");
+}
+
+/* Delegación de eventos para toda la vista de Ajustes */
+$("#vistaAjustes").addEventListener("click", (ev) => {
+  const t = ev.target;
+  const btn = t.closest("button");
+  if (!btn) return;
+  const d = btn.dataset;
+
+  if (d.addRapida) { ev.preventDefault(); altaRapida(d.addRapida); return; }
+  if (d.nuevo) {
+    editando = { clave: d.nuevo, id: "nuevo", errores: {}, borrador: {} };
+    pintarCatalogo(d.nuevo);
+    const primero = $('[data-editor="' + d.nuevo + '"] [data-campo]');
+    if (primero) primero.focus();
+    return;
+  }
+  if (d.editar) {
+    editando = { clave: d.editar, id: d.id, errores: {}, borrador: {} };
+    pintarCatalogo(d.editar);
+    return;
+  }
+  if (d.cancelar) {
+    const c = editando && editando.clave;
+    editando = null;
+    if (c) pintarCatalogo(c);
+    return;
+  }
+  if (d.guardar) { guardarItem(d.guardar); return; }
+  if (d.sugerir) {
+    const inpNombre = $('[data-editor="' + d.sugerir + '"] [data-campo="nombre"]');
+    const inpCodigo = $('[data-editor="' + d.sugerir + '"] [data-campo="codigo"]');
+    if (!inpNombre || !inpCodigo) return;
+    if (!normalizarEspacios(inpNombre.value)) { toast("Escribí primero el nombre.", "malo"); inpNombre.focus(); return; }
+    inpCodigo.value = sugerirCodigo(inpNombre.value, estado.usuarios, editando ? editando.id : null);
+    return;
+  }
+  if (d.mover) {
+    const lista = estado[d.clave];
+    const i = lista.findIndex((x) => x.id === d.id);
+    const j = i + parseInt(d.mover, 10);
+    if (i < 0 || j < 0 || j >= lista.length) return;
+    const tmp = lista[i]; lista[i] = lista[j]; lista[j] = tmp;
+    normalizarOrden(d.clave);
+    guardar(d.clave);
+    pintarCatalogo(d.clave);
+    refrescarPrincipal();
+    return;
+  }
+  if (d.activo) {
+    const it = porId(estado[d.activo], d.id);
+    it.activo = it.activo === false;
+    guardar(d.activo);
+    pintarCatalogo(d.activo);
+    refrescarPrincipal();
+    return;
+  }
+  if (d.defecto) {
+    const def = DEFS[d.defecto];
+    const it = porId(estado[d.defecto], d.id);
+    if (def.defecto === "unico") {
+      const prendido = !it.porDefecto;
+      estado[d.defecto].forEach((x) => { x.porDefecto = false; });
+      it.porDefecto = prendido;
+    } else {
+      it.porDefecto = !it.porDefecto;
+    }
+    guardar(d.defecto);
+    pintarCatalogo(d.defecto);
+    seleccionDest = null;
+    refrescarPrincipal();
+    return;
+  }
+  if (d.eliminar) {
+    const clave = d.eliminar;
+    const lista = estado[clave];
+    const it = porId(lista, d.id);
+    if (!it) return;
+    if (usadoEnHistorial(clave, d.id)) {
+      it.activo = false;
+      guardar(clave);
+      editando = null;
+      pintarCatalogo(clave);
+      refrescarPrincipal();
+      toast("Tiene registros en el historial: quedó desactivado en lugar de borrado.", "malo");
+      return;
+    }
+    estado[clave] = lista.filter((x) => x.id !== d.id);
+    normalizarOrden(clave);
+    guardar(clave);
+    editando = null;
+    pintarCatalogo(clave);
+    seleccionDest = null;
+    refrescarPrincipal();
+    toast("Eliminado.");
+  }
+});
+
+$("#vistaAjustes").addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter") return;
+  const rapida = ev.target.closest("[data-rapida]");
+  if (rapida) { ev.preventDefault(); altaRapida(rapida.dataset.rapida); return; }
+  const editor = ev.target.closest("[data-editor]");
+  if (editor && ev.target.matches("input")) { ev.preventDefault(); guardarItem(editor.dataset.editor); }
+});
+
+function pintarAjustes() {
+  ["usuarios", "categorias", "descripciones", "destinatarios"].forEach(pintarCatalogo);
+  $("#inpSeparador").value = estado.prefs.separador;
+  $("#inpFirma").value = estado.prefs.firma;
+  $("#selModo").value = estado.prefs.modoEnvio;
+  $("#inpClientId").value = estado.prefs.clientId;
+  $("#inpTenantId").value = estado.prefs.tenantId;
+  $("#redirectUri").textContent = location.origin + location.pathname;
+  $("#ejemploAsunto").textContent = ejemploAsunto();
+  $("#pieVersion").textContent = "Registro Rápido N1 · versión " + VERSION_APP;
+  pintarEstadoCuenta();
+  pintarInfoAlmacen();
+}
+
+function ejemploAsunto() {
+  const d = activos(estado.descripciones)[0];
+  const u = activos(estado.usuarios)[0];
+  const c = activos(estado.categorias)[0];
+  return componerAsunto([d ? d.texto : "", u ? u.codigo : "", c ? c.nombre : ""]) || "(sin datos cargados)";
+}
+
+$("#inpSeparador").addEventListener("input", (ev) => {
+  estado.prefs.separador = ev.target.value || " ";
+  guardar("prefs");
+  $("#ejemploAsunto").textContent = ejemploAsunto();
+  actualizarPreview();
+});
+$("#inpFirma").addEventListener("input", (ev) => { estado.prefs.firma = ev.target.value; guardar("prefs"); });
+$("#selModo").addEventListener("change", (ev) => { estado.prefs.modoEnvio = ev.target.value; guardar("prefs"); actualizarFranja(); pintarEstadoCuenta(); });
+$("#inpClientId").addEventListener("input", (ev) => { estado.prefs.clientId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
+$("#inpTenantId").addEventListener("input", (ev) => { estado.prefs.tenantId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
+
+function pintarInfoAlmacen() {
+  let bytes = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf(NS) === 0) bytes += k.length + (localStorage.getItem(k) || "").length;
+    }
+  } catch (e) { /* nada */ }
+  $("#infoAlmacen").textContent = "Configuración e historial ocupan " + (bytes / 1024).toFixed(1) +
+    " KB en este teléfono. Envíos en cola: " + estado.pendientes + ".";
+}
+
+/* =======================================================================
+   ENVÍO — Microsoft Graph (MSAL, PKCE) y respaldo mailto:
+   ======================================================================= */
+
+const MSAL_CDN = "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js";
+const SCOPES = ["User.Read", "Mail.Send"];
+let msalApp = null;
+
+class ErrorSesion extends Error {}
+
+function cargarMsal() {
+  if (window.msal) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = MSAL_CDN;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("No se pudo cargar la librería de Microsoft. Necesitás conexión la primera vez."));
+    document.head.appendChild(s);
+  });
+}
+
+async function obtenerMsal() {
+  const p = estado.prefs;
+  if (!p.clientId || !p.tenantId) throw new Error("Falta el Client ID o el Tenant ID en Ajustes.");
+  if (msalApp) return msalApp;
+  await cargarMsal();
+  msalApp = new msal.PublicClientApplication({
+    auth: {
+      clientId: p.clientId,
+      authority: "https://login.microsoftonline.com/" + p.tenantId,
+      redirectUri: location.origin + location.pathname,
+      navigateToLoginRequestUrl: true
+    },
+    cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
+  });
+  if (typeof msalApp.initialize === "function") await msalApp.initialize();
+  const resp = await msalApp.handleRedirectPromise();
+  if (resp && resp.account) {
+    msalApp.setActiveAccount(resp.account);
+  } else if (!msalApp.getActiveAccount()) {
+    const cuentas = msalApp.getAllAccounts();
+    if (cuentas.length) msalApp.setActiveAccount(cuentas[0]);
+  }
+  return msalApp;
+}
+
+async function tokenSilencioso() {
+  const app = await obtenerMsal();
+  const cuenta = app.getActiveAccount();
+  if (!cuenta) throw new ErrorSesion("Sin sesión");
+  try {
+    const r = await app.acquireTokenSilent({ scopes: SCOPES, account: cuenta });
+    return r.accessToken;
+  } catch (e) {
+    throw new ErrorSesion("Hay que iniciar sesión de nuevo");
+  }
+}
+
+async function iniciarSesion() {
+  try {
+    const app = await obtenerMsal();
+    await app.loginRedirect({ scopes: SCOPES });
+  } catch (e) {
+    toast(e.message || "No se pudo abrir el inicio de sesión.", "malo");
+  }
+}
+
+function pintarEstadoCuenta() {
+  const caja = $("#estadoCuenta");
+  const p = estado.prefs;
+  if (!p.clientId || !p.tenantId) {
+    caja.className = "franja";
+    caja.innerHTML = ICO.alerta + "<div>Sin Client ID y Tenant ID la app arma el correo y lo abre en Outlook para que lo confirmes a mano.</div>";
+    return;
+  }
+  const cuenta = msalApp && msalApp.getActiveAccount ? msalApp.getActiveAccount() : null;
+  if (cuenta) {
+    caja.className = "franja";
+    caja.innerHTML = ICO.ok + "<div>Sesión activa: <b>" + esc(cuenta.username) + "</b></div>";
+  } else {
+    caja.className = "franja aviso";
+    caja.innerHTML = ICO.alerta + "<div>Datos cargados, pero sin sesión iniciada. Tocá «Conectar cuenta».</div>";
+  }
+}
+
+$("#btnConectar").addEventListener("click", iniciarSesion);
+$("#btnDesconectar").addEventListener("click", async () => {
+  try {
+    const app = await obtenerMsal();
+    const cuenta = app.getActiveAccount();
+    if (!cuenta) { toast("No hay sesión abierta."); return; }
+    await app.logoutRedirect({ account: cuenta });
+  } catch (e) {
+    toast(e.message || "No se pudo cerrar la sesión.", "malo");
+  }
+});
+
+/* ------------------------------ Armado del correo ------------------------- */
+
+function cuerpoCorreo(texto, fecha) {
+  const firma = normalizarEspacios(estado.prefs.firma);
+  const pie = firma ? "\n\n--\n" + firma + " · " + fechaLegible(new Date(fecha)) : "";
+  return (String(texto || "").trim() || "(sin descripción escrita)") + pie;
+}
+
+function armarRegistro() {
+  const d = porId(estado.descripciones, el.selDescripcion.value);
+  const u = porId(estado.usuarios, el.selUsuario.value);
+  const c = porId(estado.categorias, el.selCategoria.value);
+  const elegidos = activos(estado.destinatarios).filter((r) => seleccionDest.has(r.id));
+  const mapa = (tipo) => elegidos.filter((r) => r.tipo === tipo).map((r) => ({ nombre: r.nombre, email: r.email }));
+  const fecha = new Date().toISOString();
+
+  return {
+    id: uid("reg"),
+    fecha: fecha,
+    asunto: asuntoActual(),
+    texto: el.texto.value,
+    cuerpo: cuerpoCorreo(el.texto.value, fecha),
+    para: mapa("para"),
+    cc: mapa("cc"),
+    cco: mapa("cco"),
+    estado: "pendiente",
+    datos: {
+      descripcionId: d ? d.id : "",
+      usuarioId: u ? u.id : "",
+      categoriaId: c ? c.id : "",
+      texto: el.texto.value,
+      dest: Array.from(seleccionDest)
+    }
+  };
+}
+
+async function enviarPorGraph(reg) {
+  const token = await tokenSilencioso();
+  const dest = (arr) => arr.map((r) => ({ emailAddress: { address: r.email, name: r.nombre } }));
+  const mensaje = {
+    subject: reg.asunto,
+    body: { contentType: "Text", content: reg.cuerpo },
+    toRecipients: dest(reg.para),
+    ccRecipients: dest(reg.cc),
+    bccRecipients: dest(reg.cco)
+  };
+
+  const r = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    body: JSON.stringify({ message: mensaje, saveToSentItems: true })
+  });
+
+  if (!r.ok) {
+    let detalle = "";
+    try {
+      const j = await r.json();
+      detalle = (j && j.error && j.error.message) ? j.error.message : "";
+    } catch (e) { /* sin cuerpo */ }
+    if (r.status === 401 || r.status === 403) throw new ErrorSesion(detalle || "Sesión vencida");
+    const err = new Error("Graph respondió " + r.status + (detalle ? ": " + detalle : ""));
+    err.http = r.status;
+    throw err;
+  }
+}
+
+function abrirMailto(reg) {
+  const cod = (arr) => arr.map((r) => encodeURIComponent(r.email)).join(",");
+  const partes = [];
+  if (reg.cc.length) partes.push("cc=" + cod(reg.cc));
+  if (reg.cco.length) partes.push("bcc=" + cod(reg.cco));
+  partes.push("subject=" + encodeURIComponent(reg.asunto));
+  partes.push("body=" + encodeURIComponent(reg.cuerpo));
+  const url = "mailto:" + cod(reg.para) + "?" + partes.join("&");
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* -------------------------------- Cola ------------------------------------ */
+
+async function encolar(reg) {
+  await bd.guardar("cola", { id: reg.id, reg: reg, intentos: 0 });
+  await actualizarPendientes();
+}
+
+async function actualizarPendientes() {
+  let n = 0;
+  try { n = (await bd.todos("cola")).length; } catch (e) { n = 0; }
+  estado.pendientes = n;
+  const b = $("#btnPendientes");
+  b.classList.toggle("oculto", n === 0);
+  $("#globoPendientes").textContent = String(n);
+  const info = $("#infoAlmacen");
+  if (info && info.textContent) pintarInfoAlmacen();
+}
+
+let procesando = false;
+async function procesarCola(porUsuario) {
+  if (procesando) return;
+  if (!navigator.onLine) { if (porUsuario) toast("Sin conexión: los pendientes esperan.", "malo"); return; }
+  procesando = true;
+  let enviados = 0, fallo = null;
+  try {
+    const items = await bd.todos("cola");
+    for (const it of items) {
+      try {
+        await enviarPorGraph(it.reg);
+        await bd.borrar("cola", it.id);
+        marcarHistorial(it.reg.id, "enviado");
+        enviados++;
+      } catch (e) {
+        fallo = e;
+        break;
+      }
+    }
+  } catch (e) {
+    fallo = e;
+  }
+  procesando = false;
+  await actualizarPendientes();
+  if (enviados) toast(enviados === 1 ? "Se envió 1 registro pendiente." : "Se enviaron " + enviados + " registros pendientes.", "ok");
+  if (fallo && porUsuario) {
+    if (fallo instanceof ErrorSesion) toast("Iniciá sesión para vaciar la cola.", "malo");
+    else toast(fallo.message || "No se pudieron enviar los pendientes.", "malo");
+  }
+}
+
+/* ------------------------------- Enviar ----------------------------------- */
+
+function estadoBoton(est, rotulo) {
+  el.btnEnviar.dataset.estado = est;
+  el.btnEnviar.disabled = (est === "enviando");
+  el.rotEnviar.textContent = rotulo;
+}
+
+function limpiarFormulario() {
+  el.texto.value = "";
+  textoBase = ""; finalAcum = "";
+  el.selCategoria.value = "";
+  seleccionDest = null;
+  el.panelDest.classList.add("oculto");
+  el.chips.setAttribute("aria-expanded", "false");
+  pintarChips();
+  actualizarPreview();
+}
+
+async function enviar() {
+  if (deseaDictar) detenerDictado();
+
+  if (!el.selCategoria.value) { toast("Elegí la categoría antes de enviar.", "malo"); el.selCategoria.focus(); return; }
+  if (!asuntoActual()) { toast("El asunto quedaría vacío. Revisá los catálogos en Ajustes.", "malo"); return; }
+  if (!seleccionDest || seleccionDest.size === 0) { toast("Marcá al menos un destinatario.", "malo"); return; }
+
+  const reg = armarRegistro();
+  if (!reg.para.length && !reg.cc.length && !reg.cco.length) { toast("Marcá al menos un destinatario.", "malo"); return; }
+
+  const modo = modoEfectivo();
+  estadoBoton("enviando", "Enviando…");
+
+  if (modo === "mailto") {
+    reg.estado = "manual";
+    agregarHistorial(reg);
+    abrirMailto(reg);
+    estadoBoton("enviado", "Abierto en Outlook");
+    vibrar(30);
+    toast("Se abrió Outlook. Confirmá el envío ahí.", "ok");
+    limpiarFormulario();
+    setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
+    return;
+  }
+
+  if (!navigator.onLine) {
+    reg.estado = "pendiente";
+    agregarHistorial(reg);
+    await encolar(reg);
+    estadoBoton("enviado", "Guardado en cola");
+    vibrar([20, 60, 20]);
+    toast("Sin red: quedó en cola y se enviará solo al volver la señal.", "ok");
+    limpiarFormulario();
+    setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
+    return;
+  }
+
+  try {
+    await enviarPorGraph(reg);
+    reg.estado = "enviado";
+    agregarHistorial(reg);
+    estadoBoton("enviado", "Enviado");
+    vibrar(60);
+    toast("Registro enviado.", "ok");
+    limpiarFormulario();
+    setTimeout(() => estadoBoton("listo", "Enviar registro"), 2200);
+  } catch (e) {
+    if (e instanceof ErrorSesion) {
+      reg.estado = "pendiente";
+      agregarHistorial(reg);
+      await encolar(reg);
+      limpiarFormulario();
+      estadoBoton("listo", "Enviar registro");
+      toast("Se necesita iniciar sesión. El registro quedó en cola y sale al volver.", "malo");
+      setTimeout(iniciarSesion, 900);
+      return;
+    }
+    if (e && e.http) {
+      reg.estado = "error";
+      agregarHistorial(reg);
+      estadoBoton("error", "No se envió");
+      toast(e.message, "malo");
+      setTimeout(() => estadoBoton("listo", "Enviar registro"), 3500);
+      return;
+    }
+    // Fallo de red o de carga de la librería: se encola.
+    reg.estado = "pendiente";
+    agregarHistorial(reg);
+    await encolar(reg);
+    limpiarFormulario();
+    estadoBoton("enviado", "Guardado en cola");
+    toast("No se pudo salir a la red: quedó en cola.", "malo");
+    setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
+  }
+}
+
+el.btnEnviar.addEventListener("click", enviar);
+window.addEventListener("online", () => procesarCola(false));
+$("#btnPendientes").addEventListener("click", () => { mostrarVista("historial"); procesarCola(true); });
+
+/* =======================================================================
+   HISTORIAL
+   ======================================================================= */
+
+function agregarHistorial(reg) {
+  estado.historial.unshift({
+    id: reg.id, fecha: reg.fecha, asunto: reg.asunto, estado: reg.estado,
+    datos: reg.datos
+  });
+  if (estado.historial.length > LIMITE_HISTORIAL) estado.historial.length = LIMITE_HISTORIAL;
+  guardar("historial");
+}
+
+function marcarHistorial(id, est) {
+  const h = estado.historial.find((x) => x.id === id);
+  if (h) { h.estado = est; guardar("historial"); }
+  if (!$("#vistaHistorial").classList.contains("oculto")) pintarHistorial();
+}
+
+const ROTULO_ESTADO = { enviado: "Enviado", pendiente: "En cola", error: "Falló", manual: "Abierto en Outlook" };
+
+function pintarHistorial() {
+  const cont = $("#listaHistorial");
+  if (!estado.historial.length) {
+    cont.innerHTML = '<p class="ayuda">Todavía no hay registros. El primero aparece acá apenas envíes.</p>';
+  } else {
+    cont.innerHTML = estado.historial.map((h) =>
+      '<div class="registro">' +
+      '<div class="asunto">' + esc(h.asunto) + "</div>" +
+      '<div class="meta"><span class="estado ' + esc(h.estado) + '">' + esc(ROTULO_ESTADO[h.estado] || h.estado) + "</span>" +
+      "<span>" + esc(fmtFecha(h.fecha)) + "</span>" +
+      '<button class="btn chico" data-reusar="' + esc(h.id) + '">Reutilizar</button></div></div>'
+    ).join("");
+  }
+  const acc = $("#accionesHistorial");
+  acc.innerHTML = estado.pendientes
+    ? '<button class="btn senal ancho" id="btnReintentar">Reintentar ' + estado.pendientes + " pendiente(s)</button>"
+    : "";
+  if (estado.pendientes) $("#btnReintentar").addEventListener("click", () => procesarCola(true));
+}
+
+$("#listaHistorial").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-reusar]");
+  if (!b) return;
+  const h = estado.historial.find((x) => x.id === b.dataset.reusar);
+  if (!h || !h.datos) return;
+  mostrarVista("registro");
+  const d = h.datos;
+  if (porId(activos(estado.descripciones), d.descripcionId)) el.selDescripcion.value = d.descripcionId;
+  if (porId(activos(estado.usuarios), d.usuarioId)) el.selUsuario.value = d.usuarioId;
+  if (porId(activos(estado.categorias), d.categoriaId)) el.selCategoria.value = d.categoriaId;
+  el.texto.value = d.texto || "";
+  textoBase = el.texto.value; finalAcum = "";
+  if (Array.isArray(d.dest) && d.dest.length) {
+    seleccionDest = new Set(d.dest.filter((id) => porId(activos(estado.destinatarios), id)));
+  }
+  pintarChips();
+  actualizarPreview();
+  toast("Registro cargado. Revisá y enviá.");
+});
+
+/* =======================================================================
+   RESPALDO — exportar / importar configuración
+   ======================================================================= */
+
+const CLAVES_CATALOGO = ["usuarios", "categorias", "descripciones", "destinatarios"];
+
+$("#btnExportar").addEventListener("click", () => {
+  const datos = {
+    app: "registro-rapido-n1",
+    version: VERSION_APP,
+    exportado: new Date().toISOString(),
+    usuarios: estado.usuarios,
+    categorias: estado.categorias,
+    descripciones: estado.descripciones,
+    destinatarios: estado.destinatarios,
+    preferencias: estado.prefs
+  };
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "registro-n1-" + selloArchivo(new Date()) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast("Configuración exportada.", "ok");
+});
+
+$("#btnImportar").addEventListener("click", () => $("#archivoImportar").click());
+
+$("#archivoImportar").addEventListener("change", async (ev) => {
+  const archivo = ev.target.files && ev.target.files[0];
+  ev.target.value = "";
+  if (!archivo) return;
+  let datos;
+  try {
+    datos = JSON.parse(await archivo.text());
+  } catch (e) {
+    toast("El archivo no es un JSON válido.", "malo");
+    return;
+  }
+  if (!datos || datos.app !== "registro-rapido-n1") {
+    toast("Ese archivo no es un respaldo de Registro Rápido N1.", "malo");
+    return;
+  }
+  if (!confirm("Se reemplazan los catálogos y las preferencias de este teléfono. ¿Seguimos?")) return;
+
+  CLAVES_CATALOGO.forEach((k) => {
+    if (Array.isArray(datos[k])) estado[k] = datos[k];
+  });
+  if (datos.preferencias && typeof datos.preferencias === "object") {
+    estado.prefs = Object.assign({}, PREFS_DEF, datos.preferencias);
+  }
+  normalizarOrden("categorias");
+  guardarTodo();
+  msalApp = null;
+  seleccionDest = null;
+  editando = null;
+  pintarAjustes();
+  refrescarPrincipal();
+  toast("Configuración importada.", "ok");
+});
+
+$("#btnVaciarCola").addEventListener("click", async () => {
+  if (!estado.pendientes) { toast("No hay pendientes."); return; }
+  if (!confirm("Se descartan los envíos en cola y no se recuperan. ¿Seguimos?")) return;
+  try { await bd.vaciar("cola"); } catch (e) { /* nada */ }
+  estado.historial.forEach((h) => { if (h.estado === "pendiente") h.estado = "error"; });
+  guardar("historial");
+  await actualizarPendientes();
+  pintarHistorial();
+  toast("Cola vacía.");
+});
+
+$("#btnBorrarHistorial").addEventListener("click", () => {
+  if (!estado.historial.length) { toast("El historial ya está vacío."); return; }
+  if (!confirm("Se borran los últimos registros del historial. ¿Seguimos?")) return;
+  estado.historial = [];
+  guardar("historial");
+  pintarHistorial();
+  pintarInfoAlmacen();
+  toast("Historial borrado.");
+});
+
+/* =======================================================================
+   NAVEGACIÓN E INICIO
+   ======================================================================= */
+
+const VISTAS = { registro: "#vistaRegistro", ajustes: "#vistaAjustes", historial: "#vistaHistorial" };
+
+function mostrarVista(nombre) {
+  Object.keys(VISTAS).forEach((k) => $(VISTAS[k]).classList.toggle("oculto", k !== nombre));
+  const enRegistro = nombre === "registro";
+  $("#pieEnvio").classList.toggle("oculto", !enRegistro);
+  document.body.classList.toggle("sin-pie", !enRegistro);
+  $("#btnAjustes").setAttribute("aria-pressed", String(nombre === "ajustes"));
+  $("#btnHistorial").setAttribute("aria-pressed", String(nombre === "historial"));
+  if (nombre === "ajustes") pintarAjustes();
+  if (nombre === "historial") pintarHistorial();
+  window.scrollTo(0, 0);
+}
+
+function refrescarPrincipal() {
+  pintarSelectores();
+  pintarChips();
+}
+
+$("#btnAjustes").addEventListener("click", () => {
+  mostrarVista($("#vistaAjustes").classList.contains("oculto") ? "ajustes" : "registro");
+});
+$("#btnHistorial").addEventListener("click", () => {
+  mostrarVista($("#vistaHistorial").classList.contains("oculto") ? "historial" : "registro");
+});
+$$("[data-volver]").forEach((b) => b.addEventListener("click", () => mostrarVista("registro")));
+
+/* Service worker */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((e) => console.warn("SW no registrado", e));
+  });
+}
+
+/* Arranque */
+(async function iniciar() {
+  refrescarPrincipal();
+  mostrarVista("registro");
+  await actualizarPendientes();
+
+  if (estado.prefs.clientId && estado.prefs.tenantId) {
+    try {
+      await obtenerMsal();
+      pintarEstadoCuenta();
+      procesarCola(false);
+    } catch (e) {
+      console.warn("MSAL no inicializado:", e.message);
+    }
+  }
+  actualizarFranja();
+})();
+</script>
+</body>
+</html>

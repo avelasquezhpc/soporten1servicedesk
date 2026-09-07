@@ -1,0 +1,20 @@
+{
+  "name": "Registro Rápido N1 · Nodus",
+  "short_name": "Registro N1",
+  "description": "Documenta el trabajo de soporte N1 enviando un correo con asunto normalizado en segundos.",
+  "lang": "es-GT",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "registro-rapido-n1",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12161c",
+  "theme_color": "#12161c",
+  "categories": ["productivity", "business"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
