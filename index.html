@@ -427,25 +427,60 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
       <div class="campo">
         <label class="rotulo" for="selModo">Cómo se envía el correo</label>
         <select id="selModo">
-          <option value="auto">Automático — Graph si hay sesión, si no Outlook</option>
-          <option value="graph">Microsoft Graph (envía solo, sin pasar por Outlook)</option>
-          <option value="mailto">Outlook por mailto: (sin adjunto, confirmás vos)</option>
+          <option value="auto">Automático — la API que esté configurada</option>
+          <option value="gmail">Gmail — envía solo desde la cuenta de Gmail</option>
+          <option value="gmailweb">Gmail web — abre el redactor y confirmás vos</option>
+          <option value="graph">Microsoft Graph — envía solo desde Outlook 365</option>
+          <option value="mailto">mailto: — abre la app de correo del teléfono</option>
         </select>
       </div>
-      <p class="ayuda">Graph envía el correo solo, sin abrir Outlook. Necesita un registro de aplicación en Azure. Pegá aquí el <b>Application (client) ID</b> y el <b>Directory (tenant) ID</b>; se guardan solo en este teléfono.</p>
-      <div class="campo">
-        <label class="rotulo" for="inpClientId">Client ID</label>
-        <input type="text" id="inpClientId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
+      <div id="bloqueGoogle">
+        <p class="ayuda">Gmail envía el correo solo, sin abrir nada. Necesita un ID de cliente OAuth creado en Google Cloud Console, tipo <b>Aplicación web</b>. El «client secret» no se usa ni se guarda.</p>
+        <div class="campo">
+          <label class="rotulo" for="inpGoogleId">Client ID de Google</label>
+          <input type="text" id="inpGoogleId" spellcheck="false" autocapitalize="off" placeholder="1234567890-abc.apps.googleusercontent.com">
+        </div>
+        <p class="ayuda">Origen autorizado de JavaScript que hay que registrar en Google:<br><code id="origenJS"></code></p>
+        <div id="estadoGoogle" class="franja"></div>
+        <div class="btn-grupo">
+          <button class="btn" id="btnConectarGoogle">Conectar Gmail</button>
+          <button class="btn" id="btnSalirGoogle">Salir de Gmail</button>
+        </div>
       </div>
-      <div class="campo">
-        <label class="rotulo" for="inpTenantId">Tenant ID</label>
-        <input type="text" id="inpTenantId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
+
+      <div id="bloqueMicrosoft">
+        <p class="ayuda">Graph envía el correo solo, sin abrir Outlook. Necesita un registro de aplicación en Azure. Pegá aquí el <b>Application (client) ID</b> y el <b>Directory (tenant) ID</b>.</p>
+        <div class="campo">
+          <label class="rotulo" for="inpClientId">Client ID</label>
+          <input type="text" id="inpClientId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
+        </div>
+        <div class="campo">
+          <label class="rotulo" for="inpTenantId">Tenant ID</label>
+          <input type="text" id="inpTenantId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
+        </div>
+        <p class="ayuda">Redirect URI que hay que registrar en Azure (tipo SPA):<br><code id="redirectUri"></code></p>
+        <div id="estadoCuenta" class="franja"></div>
+        <div class="btn-grupo">
+          <button class="btn" id="btnConectar">Conectar cuenta</button>
+          <button class="btn" id="btnDesconectar">Cerrar sesión</button>
+        </div>
       </div>
-      <p class="ayuda">Redirect URI que hay que registrar en Azure (tipo SPA):<br><code id="redirectUri"></code></p>
-      <div id="estadoCuenta" class="franja"></div>
-      <div class="btn-grupo">
-        <button class="btn" id="btnConectar">Conectar cuenta</button>
-        <button class="btn" id="btnDesconectar">Cerrar sesión</button>
+    </div>
+  </details>
+
+  <details class="seccion" id="secDictado">
+    <summary>Dictado y correcciones <span class="cuenta"></span> <span class="flecha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+    <div class="cuerpo-seccion">
+      <p class="ayuda">El reconocimiento de voz no conoce el vocabulario de la bodega y arruina los códigos de equipo. Cargá acá una línea por corrección, con el formato <code>lo que se oye = lo que se escribe</code>. Se aplican solas mientras el técnico dicta.</p>
+      <div class="campo">
+        <label class="rotulo" for="inpCorrecciones">Diccionario</label>
+        <textarea id="inpCorrecciones" spellcheck="false" autocapitalize="off" placeholder="erre efe = RF&#10;zebra = Zebra&#10;punto de acceso = AP&#10;terminal efe = Terminal RF"></textarea>
+      </div>
+      <p class="ayuda">Además, la app une por su cuenta las siglas con el número que las sigue (<code>RF catorce</code> queda <code>RF-14</code>), convierte «guion» en el signo, respeta «punto y aparte» como salto de línea y arregla mayúsculas y punto final al terminar.</p>
+      <div class="campo">
+        <label class="rotulo" for="pruebaDictado">Probar una frase</label>
+        <input type="text" id="pruebaDictado" spellcheck="false" placeholder="se reinició la erre efe catorce">
+        <p class="ayuda" id="salidaPrueba"></p>
       </div>
     </div>
   </details>
@@ -498,7 +533,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.3.0";
+const VERSION_APP = "1.4.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -653,7 +688,9 @@ const PREFS_DEF = {
   fijarUsuario: false,
   modoEnvio: "auto",
   clientId: "",
-  tenantId: ""
+  tenantId: "",
+  googleClientId: "",
+  correcciones: ""
 };
 
 const estado = {
@@ -863,9 +900,33 @@ el.panelDest.addEventListener("change", (ev) => {
 
 function modoEfectivo() {
   const p = estado.prefs;
-  if (p.modoEnvio === "mailto") return "mailto";
-  if (p.modoEnvio === "graph") return "graph";
-  return (p.clientId && p.tenantId) ? "graph" : "mailto";
+  if (p.modoEnvio && p.modoEnvio !== "auto") return p.modoEnvio;
+  if (p.googleClientId) return "gmail";
+  if (p.clientId && p.tenantId) return "graph";
+  return "mailto";
+}
+
+function esModoManual(m) { return m === "mailto" || m === "gmailweb"; }
+
+async function enviarPorApi(reg) {
+  if ((reg.via || "graph") === "gmail") return enviarPorGmail(reg);
+  return enviarPorGraph(reg);
+}
+
+async function conectarSegun(modo) {
+  if (modo === "gmail") {
+    try {
+      const t = await pedirTokenGoogle(true);
+      await traerCorreoGoogle(t);
+      pintarEstadoGoogle();
+      toast("Gmail autorizado.", "ok");
+      procesarCola(false);
+    } catch (e) {
+      toast(e.message || "No se pudo autorizar Gmail.", "malo");
+    }
+    return;
+  }
+  iniciarSesion();
 }
 
 function actualizarFranja() {
@@ -873,7 +934,10 @@ function actualizarFranja() {
   if (!activos(estado.destinatarios).length) avisos.push("Todavía no hay destinatarios. Agregalos en Ajustes.");
   else if (seleccionDest && seleccionDest.size === 0) avisos.push("No hay ningún destinatario marcado para este envío.");
   if (!activos(estado.usuarios).length) avisos.push("Cargá tu usuario técnico en Ajustes para que el asunto lleve tu código.");
-  if (modoEfectivo() === "mailto") avisos.push("Modo Outlook: el correo se arma acá pero el envío lo confirmás vos en Outlook.");
+  const via = modoEfectivo();
+  if (via === "mailto") avisos.push("Modo mailto: el correo se arma acá pero el envío lo confirmás vos en la app de correo.");
+  if (via === "gmailweb") avisos.push("Modo Gmail web: se abre el redactor de Gmail y el envío lo confirmás vos.");
+  if (via === "gmail" && !estado.prefs.googleClientId) avisos.push("Falta el Client ID de Google en Ajustes: no se puede enviar por Gmail.");
   if (!almacenOk) avisos.push("El almacenamiento del navegador está bloqueado: los cambios no se conservarán.");
 
   if (!avisos.length) { el.franjaModo.classList.add("oculto"); return; }
@@ -911,6 +975,94 @@ el.selCategoria.addEventListener("change", actualizarPreview);
 el.texto.addEventListener("input", () => { textoBase = el.texto.value; finalAcum = ""; });
 
 /* =======================================================================
+   CORRECCIÓN DEL DICTADO
+   El reconocedor no conoce el vocabulario de la bodega: se le pasa el
+   texto por un diccionario editable, se unen las siglas con su número
+   y se arregla la puntuación al terminar.
+   ======================================================================= */
+
+const NUMEROS = {
+  cero: "0", uno: "1", una: "1", dos: "2", tres: "3", cuatro: "4", cinco: "5",
+  seis: "6", siete: "7", ocho: "8", nueve: "9", diez: "10", once: "11", doce: "12",
+  trece: "13", catorce: "14", quince: "15", dieciseis: "16", diecisiete: "17",
+  dieciocho: "18", diecinueve: "19", veinte: "20", veintiuno: "21", veintidos: "22",
+  veintitres: "23", veinticuatro: "24", veinticinco: "25", veintiseis: "26",
+  veintisiete: "27", veintiocho: "28", veintinueve: "29", treinta: "30",
+  cuarenta: "40", cincuenta: "50", sesenta: "60", setenta: "70", ochenta: "80", noventa: "90"
+};
+
+const LETRA = "A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ";
+
+function reglasCorreccion() {
+  return String(estado.prefs.correcciones || "").split(/\r?\n/).map((linea) => {
+    const i = linea.indexOf("=");
+    if (i < 1) return null;
+    const de = linea.slice(0, i).trim();
+    const a = linea.slice(i + 1).trim();
+    return de ? { de: de, a: a } : null;
+  }).filter(Boolean);
+}
+
+function escapeRe(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function aplicarReglas(texto) {
+  let t = texto;
+  reglasCorreccion().forEach((r) => {
+    const variantes = [r.de];
+    const plano = sinAcentos(r.de);
+    if (plano !== r.de) variantes.push(plano);
+    const patron = new RegExp("(^|[^" + LETRA + "])(" + variantes.map(escapeRe).join("|") + ")(?![" + LETRA + "])", "gi");
+    t = t.replace(patron, (m, pre) => pre + r.a);
+  });
+  return t;
+}
+
+function comandosVoz(t) {
+  return t
+    .replace(/\bpunto y aparte\b/gi, "\n")
+    .replace(/\bnueva l[ií]nea\b/gi, "\n")
+    .replace(/\s*\bgui[oó]n\b\s*/gi, "-");
+}
+
+function unirCodigos(t) {
+  const nums = Object.keys(NUMEROS).join("|");
+  let x = t.replace(new RegExp("\\b([A-ZÑ]{2,5})[\\s-]+(" + nums + ")\\b", "gi"), (m, sigla, num) => {
+    if (sigla !== sigla.toUpperCase()) return m;
+    return sigla + "-" + NUMEROS[sinAcentos(num).toLowerCase()];
+  });
+  x = x.replace(/\b([A-ZÑ]{2,5})[\s-]+(\d{1,4})\b/g, "$1-$2");
+  return x;
+}
+
+function pulirTexto(t) {
+  let x = aplicarReglas(t);
+  x = comandosVoz(x);
+  x = unirCodigos(x);
+  return x.replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").trim();
+}
+
+function puntuar(t) {
+  let x = String(t || "").trim();
+  if (!x) return x;
+  x = x.replace(/(^|[.!?]\s+|\n)([a-záéíóúüñ])/g, (m, pre, c) => pre + c.toUpperCase());
+  if (!/[.!?]$/.test(x)) x += ".";
+  return x;
+}
+
+function mejorAlternativa(resultado) {
+  if (!resultado || resultado.length <= 1) return resultado[0].transcript;
+  const terminos = reglasCorreccion().map((r) => sinAcentos(r.de).toLowerCase()).filter(Boolean);
+  let mejor = resultado[0].transcript, puntos = -1;
+  for (let i = 0; i < resultado.length; i++) {
+    const t = sinAcentos(resultado[i].transcript).toLowerCase();
+    let p = terminos.reduce((acc, term) => acc + (t.indexOf(term) >= 0 ? 1 : 0), 0);
+    if (i === 0) p += 0.5;
+    if (p > puntos) { puntos = p; mejor = resultado[i].transcript; }
+  }
+  return mejor;
+}
+
+/* =======================================================================
    VOZ — la nota de voz se transcribe en vivo a texto; no se guarda audio.
    SpeechRecognition solo escucha el micrófono en directo: no puede
    transcribir un archivo ya grabado sin un servicio externo, y por eso
@@ -943,14 +1095,17 @@ function iniciarDictado() {
   recon.lang = IDIOMAS[idiomaIdx];
   recon.continuous = true;
   recon.interimResults = true;
-  recon.maxAlternatives = 1;
+  recon.maxAlternatives = 3;
 
   recon.onresult = (ev) => {
     let interino = "";
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      const t = ev.results[i][0].transcript;
-      if (ev.results[i].isFinal) finalAcum += t.trim() + " ";
-      else interino += t;
+      if (ev.results[i].isFinal) {
+        const limpio = pulirTexto(mejorAlternativa(ev.results[i]));
+        if (limpio) finalAcum += limpio + " ";
+      } else {
+        interino += ev.results[i][0].transcript;
+      }
     }
     const partes = [textoBase.trim(), (finalAcum + interino).trim()].filter(Boolean);
     el.texto.value = partes.join(textoBase.trim() ? "\n" : "");
@@ -1003,6 +1158,9 @@ function iniciarDictado() {
 function detenerDictado() {
   deseaDictar = false;
   if (recon) { try { recon.stop(); } catch (e) { /* ya detenido */ } }
+  el.texto.value = puntuar(el.texto.value);
+  textoBase = el.texto.value;
+  finalAcum = "";
   pintarDictado();
 }
 
@@ -1373,6 +1531,14 @@ function pintarAjustes() {
   $("#inpClientId").value = estado.prefs.clientId;
   $("#inpTenantId").value = estado.prefs.tenantId;
   $("#redirectUri").textContent = location.origin + location.pathname;
+  $("#origenJS").textContent = location.origin;
+  $("#inpGoogleId").value = estado.prefs.googleClientId;
+  $("#inpCorrecciones").value = estado.prefs.correcciones;
+  pintarBloquesCuenta();
+  pintarEstadoGoogle();
+  probarDictado();
+  const cd = $("#secDictado summary .cuenta");
+  if (cd) cd.textContent = reglasCorreccion().length + " reglas";
   pintarFranjaConfig();
   const info = $("#infoConfig");
   if (info) {
@@ -1401,9 +1567,61 @@ $("#inpSeparador").addEventListener("input", (ev) => {
   actualizarPreview();
 });
 $("#inpFirma").addEventListener("input", (ev) => { estado.prefs.firma = ev.target.value; guardar("prefs"); });
-$("#selModo").addEventListener("change", (ev) => { estado.prefs.modoEnvio = ev.target.value; guardar("prefs"); actualizarFranja(); pintarEstadoCuenta(); });
+$("#selModo").addEventListener("change", (ev) => {
+  estado.prefs.modoEnvio = ev.target.value;
+  guardar("prefs");
+  actualizarFranja();
+  pintarBloquesCuenta();
+  pintarEstadoCuenta();
+  pintarEstadoGoogle();
+});
+
+function pintarBloquesCuenta() {
+  const via = modoEfectivo();
+  const auto = estado.prefs.modoEnvio === "auto";
+  $("#bloqueGoogle").classList.toggle("oculto", !(auto || via === "gmail" || via === "gmailweb"));
+  $("#bloqueMicrosoft").classList.toggle("oculto", !(auto || via === "graph"));
+}
 $("#inpClientId").addEventListener("input", (ev) => { estado.prefs.clientId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
 $("#inpTenantId").addEventListener("input", (ev) => { estado.prefs.tenantId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
+
+$("#inpGoogleId").addEventListener("input", (ev) => {
+  estado.prefs.googleClientId = ev.target.value.trim();
+  guardar("prefs");
+  clienteGoogle = null;
+  tokenGoogle = null;
+  actualizarFranja();
+  pintarEstadoGoogle();
+});
+
+$("#btnConectarGoogle").addEventListener("click", () => conectarSegun("gmail"));
+
+$("#btnSalirGoogle").addEventListener("click", () => {
+  if (tokenGoogle && window.google && google.accounts && google.accounts.oauth2) {
+    try { google.accounts.oauth2.revoke(tokenGoogle.valor); } catch (e) { /* ya revocado */ }
+  }
+  tokenGoogle = null;
+  correoGoogle = "";
+  almacen.borrar("correoGoogle");
+  pintarEstadoGoogle();
+  toast("Se cerró la sesión de Gmail en este teléfono.");
+});
+
+function probarDictado() {
+  const inp = $("#pruebaDictado"), out = $("#salidaPrueba");
+  if (!inp || !out) return;
+  out.textContent = inp.value ? "Queda: " + puntuar(pulirTexto(inp.value)) : "";
+}
+
+$("#inpCorrecciones").addEventListener("input", (ev) => {
+  estado.prefs.correcciones = ev.target.value;
+  guardar("prefs");
+  const c = $("#secDictado summary .cuenta");
+  if (c) c.textContent = reglasCorreccion().length + " reglas";
+  probarDictado();
+});
+
+$("#pruebaDictado").addEventListener("input", probarDictado);
 
 function pintarInfoAlmacen() {
   let bytes = 0;
@@ -1515,6 +1733,170 @@ $("#btnDesconectar").addEventListener("click", async () => {
   }
 });
 
+/* =======================================================================
+   GMAIL — Google Identity Services (OAuth 2.0, token de navegador)
+   Sin client secret y sin servidor: el token vive en memoria y dura una
+   hora. Se pide de nuevo solo cuando hace falta.
+   ======================================================================= */
+
+const GIS_CDN = "https://accounts.google.com/gsi/client";
+const SCOPES_GOOGLE = "https://www.googleapis.com/auth/gmail.send email";
+let clienteGoogle = null;
+let tokenGoogle = null;                                  // { valor, expira }
+let correoGoogle = almacen.leer("correoGoogle", "");     // solo para mostrarlo
+
+function cargarGIS() {
+  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const sc = document.createElement("script");
+    sc.src = GIS_CDN;
+    sc.async = true;
+    sc.onload = () => resolve();
+    sc.onerror = () => reject(new Error("No se pudo cargar la librería de Google. Necesitás conexión la primera vez."));
+    document.head.appendChild(sc);
+  });
+}
+
+async function clienteToken() {
+  const id = estado.prefs.googleClientId;
+  if (!id) throw new Error("Falta el Client ID de Google en Ajustes.");
+  await cargarGIS();
+  if (!clienteGoogle) {
+    clienteGoogle = google.accounts.oauth2.initTokenClient({
+      client_id: id,
+      scope: SCOPES_GOOGLE,
+      callback: () => {}
+    });
+  }
+  return clienteGoogle;
+}
+
+function pedirTokenGoogle(interactivo) {
+  return new Promise((resolve, reject) => {
+    clienteToken().then((c) => {
+      c.callback = (resp) => {
+        if (resp && resp.access_token) {
+          const dura = (resp.expires_in ? resp.expires_in * 1000 : 3600000) - 60000;
+          tokenGoogle = { valor: resp.access_token, expira: Date.now() + dura };
+          resolve(resp.access_token);
+        } else {
+          reject(new ErrorSesion((resp && resp.error) || "Google no entregó autorización"));
+        }
+      };
+      c.error_callback = (err) => reject(new ErrorSesion((err && err.type) || "Se canceló la autorización de Google"));
+      try {
+        c.requestAccessToken({ prompt: interactivo ? "consent" : "" });
+      } catch (e) {
+        reject(new ErrorSesion("No se pudo abrir la ventana de Google"));
+      }
+    }).catch(reject);
+  });
+}
+
+async function tokenGmail() {
+  if (tokenGoogle && Date.now() < tokenGoogle.expira) return tokenGoogle.valor;
+  return pedirTokenGoogle(false);
+}
+
+async function traerCorreoGoogle(token) {
+  try {
+    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: "Bearer " + token }
+    });
+    if (!r.ok) return "";
+    const j = await r.json();
+    correoGoogle = j.email || "";
+    almacen.escribir("correoGoogle", correoGoogle);
+    return correoGoogle;
+  } catch (e) { return ""; }
+}
+
+/* ---- Armado del mensaje RFC 822: base64 en cuerpo y encabezados, para
+   que las tildes y la ñ lleguen intactas al sistema de tickets ---- */
+
+function utf8(txt) { return new TextEncoder().encode(txt); }
+
+function b64url(bytes) {
+  return b64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function cabeceraUTF8(txt) {
+  return "=?UTF-8?B?" + b64(utf8(txt)) + "?=";
+}
+
+function partir76(txt) {
+  return txt.replace(/(.{76})/g, "$1\r\n");
+}
+
+function armarMIME(reg) {
+  const lista = (arr) => arr.map((r) => (r.nombre ? cabeceraUTF8(r.nombre) + " <" + r.email + ">" : r.email)).join(", ");
+  const h = [];
+  if (reg.para.length) h.push("To: " + lista(reg.para));
+  if (reg.cc.length) h.push("Cc: " + lista(reg.cc));
+  if (reg.cco.length) h.push("Bcc: " + lista(reg.cco));
+  h.push("Subject: " + cabeceraUTF8(reg.asunto));
+  h.push("MIME-Version: 1.0");
+  h.push('Content-Type: text/plain; charset="UTF-8"');
+  h.push("Content-Transfer-Encoding: base64");
+  return h.join("\r\n") + "\r\n\r\n" + partir76(b64(utf8(reg.cuerpo)));
+}
+
+async function enviarPorGmail(reg) {
+  const token = await tokenGmail();
+  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    body: JSON.stringify({ raw: b64url(utf8(armarMIME(reg))) })
+  });
+  if (!r.ok) {
+    let detalle = "";
+    try {
+      const j = await r.json();
+      detalle = (j && j.error && j.error.message) ? j.error.message : "";
+    } catch (e) { /* sin cuerpo */ }
+    if (r.status === 401 || r.status === 403) {
+      tokenGoogle = null;
+      throw new ErrorSesion(detalle || "Autorización de Gmail vencida");
+    }
+    const err = new Error("Gmail respondió " + r.status + (detalle ? ": " + detalle : ""));
+    err.http = r.status;
+    throw err;
+  }
+}
+
+function abrirGmailWeb(reg) {
+  const q = new URLSearchParams();
+  q.set("view", "cm");
+  q.set("fs", "1");
+  q.set("to", reg.para.map((r) => r.email).join(","));
+  if (reg.cc.length) q.set("cc", reg.cc.map((r) => r.email).join(","));
+  if (reg.cco.length) q.set("bcc", reg.cco.map((r) => r.email).join(","));
+  q.set("su", reg.asunto);
+  q.set("body", reg.cuerpo);
+  window.open("https://mail.google.com/mail/?" + q.toString(), "_blank", "noopener");
+}
+
+function pintarEstadoGoogle() {
+  const caja = $("#estadoGoogle");
+  if (!caja) return;
+  if (!estado.prefs.googleClientId) {
+    caja.className = "franja";
+    caja.innerHTML = ICO.alerta + "<div>Sin Client ID de Google la app no puede enviar sola por Gmail.</div>";
+    return;
+  }
+  if (tokenGoogle && Date.now() < tokenGoogle.expira) {
+    caja.className = "franja";
+    caja.innerHTML = ICO.ok + "<div>Gmail autorizado" + (correoGoogle ? ": <b>" + esc(correoGoogle) + "</b>" : "") + "</div>";
+  } else {
+    caja.className = "franja aviso";
+    caja.innerHTML = ICO.alerta + "<div>" + (correoGoogle ? "Última cuenta usada: <b>" + esc(correoGoogle) + "</b>. " : "") +
+      "La autorización dura una hora; se renueva sola al enviar.</div>";
+  }
+}
+
 /* ------------------------------ Armado del correo ------------------------- */
 
 function cuerpoCorreo(texto, fecha) {
@@ -1534,6 +1916,7 @@ function armarRegistro() {
   return {
     id: uid("reg"),
     fecha: fecha,
+    via: modoEfectivo(),
     asunto: asuntoActual(),
     texto: el.texto.value,
     cuerpo: cuerpoCorreo(el.texto.value, fecha),
@@ -1628,7 +2011,7 @@ async function procesarCola(porUsuario) {
     const items = await bd.todos("cola");
     for (const it of items) {
       try {
-        await enviarPorGraph(it.reg);
+        await enviarPorApi(it.reg);
         await bd.borrar("cola", it.id);
         marcarHistorial(it.reg.id, "enviado");
         enviados++;
@@ -1681,13 +2064,14 @@ async function enviar() {
   const modo = modoEfectivo();
   estadoBoton("enviando", "Enviando…");
 
-  if (modo === "mailto") {
+  if (esModoManual(modo)) {
+    const enGmail = modo === "gmailweb";
     reg.estado = "manual";
     agregarHistorial(reg);
-    abrirMailto(reg);
-    estadoBoton("enviado", "Abierto en Outlook");
+    if (enGmail) abrirGmailWeb(reg); else abrirMailto(reg);
+    estadoBoton("enviado", enGmail ? "Abierto en Gmail" : "Abierto en el correo");
     vibrar(30);
-    toast("Se abrió Outlook. Confirmá el envío ahí.", "ok");
+    toast(enGmail ? "Se abrió Gmail. Confirmá el envío ahí." : "Se abrió tu app de correo. Confirmá el envío ahí.", "ok");
     limpiarFormulario();
     setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
     return;
@@ -1706,7 +2090,7 @@ async function enviar() {
   }
 
   try {
-    await enviarPorGraph(reg);
+    await enviarPorApi(reg);
     reg.estado = "enviado";
     agregarHistorial(reg);
     estadoBoton("enviado", "Enviado");
@@ -1721,8 +2105,8 @@ async function enviar() {
       await encolar(reg);
       limpiarFormulario();
       estadoBoton("listo", "Enviar registro");
-      toast("Se necesita iniciar sesión. El registro quedó en cola y sale al volver.", "malo");
-      setTimeout(iniciarSesion, 900);
+      toast("Hay que autorizar la cuenta. El registro quedó en cola y sale al volver.", "malo");
+      setTimeout(() => conectarSegun(modo), 900);
       return;
     }
     if (e && e.http) {
@@ -2139,7 +2523,7 @@ setInterval(() => {
    es el permiso de escritura del repositorio, no esta contraseña.
    ======================================================================= */
 
-const CLAVES_ADMIN = ["separador", "firma", "modoEnvio", "clientId", "tenantId"];
+const CLAVES_ADMIN = ["separador", "firma", "modoEnvio", "clientId", "tenantId", "googleClientId", "correcciones"];
 let configRemota = almacen.leer("configSello", null);   // { sello, leida }
 
 function aplicarConfig(datos) {
