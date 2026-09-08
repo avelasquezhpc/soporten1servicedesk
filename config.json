@@ -1,7 +1,7 @@
 {
   "app": "registro-rapido-n1",
-  "version": "1.6.0",
-  "exportado": "2026-09-08T18:51:37.555Z",
+  "version": "1.7.0",
+  "exportado": "2026-09-08T20:05:30.976Z",
   "usuarios": [
     {
       "id": "u_mtt0degfxavkb",
@@ -170,7 +170,32 @@
       "activo": true
     }
   ],
-  "destinatarios": [],
+  "destinatarios": [
+    {
+      "id": "r_mtt2u33asz88r",
+      "nombre": "Soporte IT",
+      "email": "soporte@it.com.gt",
+      "tipo": "para",
+      "porDefecto": true,
+      "activo": true
+    },
+    {
+      "id": "r_mtt2uhmeasaur",
+      "nombre": "Alexander Aguilar",
+      "email": "alexander.aguilar@zigo.com.gt",
+      "tipo": "cc",
+      "porDefecto": false,
+      "activo": true
+    },
+    {
+      "id": "r_mtt2v59uo4ax9",
+      "nombre": "Anthony Velasquez",
+      "email": "anthony.velasquez@hpc.com.gt",
+      "tipo": "cc",
+      "porDefecto": false,
+      "activo": true
+    }
+  ],
   "preferencias": {
     "separador": " - ",
     "firma": "Realizado desde Registro Rápido N1",
@@ -178,6 +203,10 @@
     "usuarioFijado": "",
     "fijarDescripcion": false,
     "fijarUsuario": false,
+    "fijarDest": true,
+    "destFijados": [
+      "r_mtt2u33asz88r"
+    ],
     "modoEnvio": "auto",
     "clientId": "",
     "tenantId": "",

@@ -138,6 +138,11 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
 
 /* ---------- Chips ---------- */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
+.fila>.chips{
+  flex:1;align-items:center;min-height:var(--alto-tactil);padding:9px 10px;
+  background:var(--superficie);border:1px solid var(--linea);border-radius:var(--r);
+  box-shadow:var(--sombra);
+}
 .chip{
   display:inline-flex;align-items:center;gap:6px;
   padding:7px 11px;border-radius:999px;font-size:13px;
@@ -340,7 +345,10 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
 
   <div class="campo">
     <label class="rotulo">Destinatarios</label>
-    <div class="chips" id="chipsDest" role="button" tabindex="0" aria-expanded="false" aria-controls="panelDest"></div>
+    <div class="fila">
+      <div class="chips" id="chipsDest" role="button" tabindex="0" aria-expanded="false" aria-controls="panelDest"></div>
+      <button class="candado" id="lockDest" aria-pressed="false" aria-label="Fijar estos destinatarios en este teléfono" title="Fijar"></button>
+    </div>
     <div class="selector-dest oculto" id="panelDest"></div>
   </div>
 </section>
@@ -540,7 +548,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.6.0";
+const VERSION_APP = "1.7.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -694,6 +702,8 @@ const PREFS_DEF = {
   usuarioFijado: "",
   fijarDescripcion: false,
   fijarUsuario: false,
+  fijarDest: false,
+  destFijados: [],
   modoEnvio: "auto",
   clientId: "",
   tenantId: "",
@@ -826,6 +836,11 @@ function pintarCandados() {
   el.lockDescripcion.setAttribute("aria-pressed", String(!!estado.prefs.fijarDescripcion));
   el.lockUsuario.innerHTML = estado.prefs.fijarUsuario ? ICO.candadoCerrado : ICO.candadoAbierto;
   el.lockUsuario.setAttribute("aria-pressed", String(!!estado.prefs.fijarUsuario));
+  const ld = $("#lockDest");
+  if (ld) {
+    ld.innerHTML = estado.prefs.fijarDest ? ICO.candadoCerrado : ICO.candadoAbierto;
+    ld.setAttribute("aria-pressed", String(!!estado.prefs.fijarDest));
+  }
 }
 
 function asuntoActual() {
@@ -859,7 +874,13 @@ function mostrarCorreo(email) {
 }
 
 function destinatariosPorDefecto() {
-  return new Set(activos(estado.destinatarios).filter((r) => r.porDefecto).map((r) => r.id));
+  const vivos = activos(estado.destinatarios);
+  const p = estado.prefs;
+  if (p.fijarDest && Array.isArray(p.destFijados) && p.destFijados.length) {
+    const fijados = p.destFijados.filter((id) => vivos.some((r) => r.id === id));
+    if (fijados.length) return new Set(fijados);
+  }
+  return new Set(vivos.filter((r) => r.porDefecto).map((r) => r.id));
 }
 
 function pintarChips() {
@@ -902,6 +923,10 @@ el.panelDest.addEventListener("change", (ev) => {
   const cb = ev.target.closest("input[data-dest]");
   if (!cb) return;
   if (cb.checked) seleccionDest.add(cb.dataset.dest); else seleccionDest.delete(cb.dataset.dest);
+  if (estado.prefs.fijarDest) {
+    estado.prefs.destFijados = Array.from(seleccionDest);
+    guardar("prefs");
+  }
   pintarChips();
 });
 
@@ -1002,6 +1027,17 @@ el.lockUsuario.addEventListener("click", () => {
   toast(p.fijarUsuario ? "Técnico fijado para las próximas aperturas." : "Técnico liberado.");
 });
 
+$("#lockDest").addEventListener("click", () => {
+  const p = estado.prefs;
+  p.fijarDest = !p.fijarDest;
+  p.destFijados = p.fijarDest ? Array.from(seleccionDest || destinatariosPorDefecto()) : [];
+  guardar("prefs");
+  pintarCandados();
+  toast(p.fijarDest
+    ? "Estos destinatarios quedan fijos en este teléfono."
+    : "Destinatarios liberados: vuelven a los marcados en Ajustes.");
+});
+
 el.selDescripcion.addEventListener("change", () => {
   if (estado.prefs.fijarDescripcion) { estado.prefs.descripcionFijada = el.selDescripcion.value; guardar("prefs"); }
   actualizarPreview();
@@ -1073,10 +1109,25 @@ function unirCodigos(t) {
   return x;
 }
 
+/* El reconocedor a veces reemite lo mismo dos veces seguidas. Se colapsa
+   la frase repetida de forma inmediata, no las repeticiones separadas. */
+function quitarRepetidos(t) {
+  // El acento no cuenta como carácter de palabra para \b, así que el corte
+  // se hace con lookahead sobre el propio juego de letras.
+  const L = "A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ";
+  const P = "[" + L + "]+(?:[-/.][" + L + "]+)*";
+  const fin = "(?![" + L + "])";
+  let x = String(t || "");
+  x = x.replace(new RegExp("((?:" + P + "[ ]+){1,5}" + P + ")([ ]+\\1)+" + fin, "gi"), "$1");
+  x = x.replace(new RegExp("(" + P + ")([ ]+\\1)+" + fin, "gi"), "$1");
+  return x.replace(/[ \t]+/g, " ").trim();
+}
+
 function pulirTexto(t) {
   let x = aplicarReglas(t);
   x = comandosVoz(x);
   x = unirCodigos(x);
+  x = quitarRepetidos(x);
   return x.replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").trim();
 }
 
@@ -1126,34 +1177,50 @@ function pintarCronoDictado() {
   $("#crono").textContent = m + ":" + String(s2).padStart(2, "0");
 }
 
-function iniciarDictado() {
+const ES_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function soltarRecon(r) {
+  if (!r) return;
+  r.onresult = null; r.onend = null; r.onerror = null;
+  try { r.abort(); } catch (e) { /* ya terminado */ }
+}
+
+function iniciarDictado(continuacion) {
   if (!SR) return;
+  soltarRecon(recon);
   textoBase = el.texto.value;
   finalAcum = "";
   recon = new SR();
   recon.lang = IDIOMAS[idiomaIdx];
-  recon.continuous = true;
+  // En iOS el modo continuo reemite frases enteras: conviene por tramos.
+  recon.continuous = !ES_IOS;
   recon.interimResults = true;
   recon.maxAlternatives = 3;
 
+  /* Se rearma el texto completo desde ev.results en cada evento. Antes se
+     iba acumulando, y cada vez que el motor reemitía un tramo ya cerrado
+     la frase quedaba escrita dos veces. */
   recon.onresult = (ev) => {
-    let interino = "";
-    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+    let finales = "", interino = "";
+    for (let i = 0; i < ev.results.length; i++) {
       if (ev.results[i].isFinal) {
         const limpio = pulirTexto(mejorAlternativa(ev.results[i]));
-        if (limpio) finalAcum += limpio + " ";
+        if (limpio) finales += limpio + " ";
       } else {
-        interino += ev.results[i][0].transcript;
+        interino += ev.results[i][0].transcript + " ";
       }
     }
-    const partes = [textoBase.trim(), (finalAcum + interino).trim()].filter(Boolean);
-    el.texto.value = partes.join(textoBase.trim() ? "\n" : "");
+    finalAcum = quitarRepetidos(finales);
+    const dicho = quitarRepetidos(finalAcum + " " + interino);
+    const base = textoBase.trim();
+    el.texto.value = base ? base + "\n" + dicho : dicho;
   };
 
   recon.onerror = (ev) => {
     if (ev.error === "language-not-supported" && idiomaIdx < IDIOMAS.length - 1) {
       idiomaIdx++;
-      if (deseaDictar) { try { recon.stop(); } catch (e) {} setTimeout(iniciarDictado, 150); }
+      if (deseaDictar) { soltarRecon(recon); setTimeout(() => iniciarDictado(true), 150); }
       return;
     }
     if (ev.error === "no-speech" || ev.error === "aborted") return;
@@ -1169,24 +1236,22 @@ function iniciarDictado() {
   };
 
   recon.onend = () => {
-    if (deseaDictar) {
-      textoBase = el.texto.value;
-      finalAcum = "";
-      try { recon.start(); } catch (e) { deseaDictar = false; pintarDictado(); }
-    } else {
-      pintarDictado();
-    }
+    if (!deseaDictar) { pintarDictado(); return; }
+    // Instancia nueva por tramo: reusar la anterior arrastra sus resultados.
+    setTimeout(() => { if (deseaDictar) iniciarDictado(true); }, 120);
   };
 
   try {
     recon.start();
     deseaDictar = true;
-    segDic = 0;
-    pintarCronoDictado();
-    clearInterval(tDic);
-    tDic = setInterval(() => { segDic++; pintarCronoDictado(); }, 1000);
+    if (!continuacion) {
+      segDic = 0;
+      pintarCronoDictado();
+      clearInterval(tDic);
+      tDic = setInterval(() => { segDic++; pintarCronoDictado(); }, 1000);
+      vibrar(20);
+    }
     pintarDictado();
-    vibrar(20);
   } catch (e) {
     deseaDictar = false;
     pintarDictado();
@@ -1197,6 +1262,7 @@ function iniciarDictado() {
 function detenerDictado() {
   deseaDictar = false;
   if (recon) { try { recon.stop(); } catch (e) { /* ya detenido */ } }
+  el.texto.value = quitarRepetidos(el.texto.value);
   el.texto.value = puntuar(el.texto.value);
   textoBase = el.texto.value;
   finalAcum = "";
