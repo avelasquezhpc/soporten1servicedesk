@@ -1,25 +1,140 @@
 {
   "app": "registro-rapido-n1",
   "version": "1.6.0",
-  "exportado": "2026-09-08T18:33:22.907Z",
-  "usuarios": [],
+  "exportado": "2026-09-08T18:51:37.555Z",
+  "usuarios": [
+    {
+      "id": "u_mtt0degfxavkb",
+      "nombre": "Marvin Perez",
+      "codigo": "01-MP",
+      "activo": true
+    },
+    {
+      "id": "u_mtt0dnc6finx6",
+      "nombre": "Fernando Morales",
+      "codigo": "02-FM",
+      "activo": true
+    },
+    {
+      "id": "u_mtt0dxguykbsi",
+      "nombre": "Emanuel Sirin",
+      "codigo": "03-ES",
+      "activo": true
+    },
+    {
+      "id": "u_mtt0ebi7q0hnl",
+      "nombre": "Alexander Aguilar",
+      "codigo": "04-AG",
+      "activo": true
+    },
+    {
+      "id": "u_mtt0espu2cjhc",
+      "nombre": "Anthony Velasquez",
+      "codigo": "05-AV",
+      "activo": true
+    }
+  ],
   "categorias": [
     {
-      "id": "c_mtt0bms1ym0am",
-      "nombre": "Impresoras Zebra",
+      "id": "c_mtt0fg9zts51j",
+      "nombre": "HandHeld Inconvenientes",
       "orden": 1,
       "activo": true
     },
     {
-      "id": "c_mtt0bms1fba5u",
-      "nombre": "Terminales RF",
+      "id": "c_mtt0lel7klo3k",
+      "nombre": "HandHeld Actualización",
       "orden": 2,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0i7kk73kyg",
+      "nombre": "Impresora Portatil",
+      "orden": 3,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0bms1ym0am",
+      "nombre": "Impresoras Zebra",
+      "orden": 4,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0bms1fba5u",
+      "nombre": "Impresoras Canon",
+      "orden": 5,
       "activo": true
     },
     {
       "id": "c_mtt0bms1v8s4g",
       "nombre": "Red / WiFi",
-      "orden": 3,
+      "orden": 6,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0k7pch8c8l",
+      "nombre": "Lentitud de Sistema",
+      "orden": 7,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0fz4ce18kd",
+      "nombre": "Retirar Pedidos",
+      "orden": 8,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0gzl7tot7x",
+      "nombre": "Revisar Olas",
+      "orden": 9,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0i3m76urzq",
+      "nombre": "Revisión de Equipo Computo",
+      "orden": 10,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0imf6tjlm4",
+      "nombre": "Creación de Usuarios",
+      "orden": 11,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0jm3nijzq3",
+      "nombre": "Acceso a Bodegas",
+      "orden": 12,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0o44i3vfuk",
+      "nombre": "Corrección de Rutas",
+      "orden": 13,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0ohuu1ldbu",
+      "nombre": "Problema I3",
+      "orden": 14,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0ph3am20fp",
+      "nombre": "Creación de Rutas",
+      "orden": 15,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0pv61lehh3",
+      "nombre": "Creación de Clientes Zigo",
+      "orden": 16,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0r06tknkji",
+      "nombre": "Líneas Telefónicas",
+      "orden": 17,
       "activo": true
     }
   ],
@@ -28,6 +143,24 @@
       "id": "d_mtt0bms1yink3",
       "texto": "Soporte Bodega Nodus",
       "porDefecto": true,
+      "activo": true
+    },
+    {
+      "id": "d_mtt0siwvn2nlp",
+      "texto": "Soporte Zigo",
+      "porDefecto": false,
+      "activo": true
+    },
+    {
+      "id": "d_mtt0sru5s57sx",
+      "texto": "Soporte Centro de Servicio",
+      "porDefecto": false,
+      "activo": true
+    },
+    {
+      "id": "d_mtt0svmu15ytd",
+      "texto": "Soporte Cemaco",
+      "porDefecto": false,
       "activo": true
     },
     {
@@ -40,7 +173,7 @@
   "destinatarios": [],
   "preferencias": {
     "separador": " - ",
-    "firma": "Registrado desde Registro Rápido N1",
+    "firma": "Realizado desde Registro Rápido N1",
     "descripcionFijada": "",
     "usuarioFijado": "",
     "fijarDescripcion": false,
@@ -48,8 +181,12 @@
     "modoEnvio": "auto",
     "clientId": "",
     "tenantId": "",
-    "googleClientId": "",
+    "googleClientId": "758588293784-gl975ljolcikv42rhjokvppohbmr9n9q.apps.googleusercontent.com",
     "correcciones": ""
   },
-  "bloqueo": null
+  "bloqueo": {
+    "sal": "FhySn4RhnPOKXCUYl28/SQ==",
+    "hash": "+wV0uzKCghehlNXHY7sOTGq6yFvlxmhElJJx8E1zoY4=",
+    "iter": 210000
+  }
 }
