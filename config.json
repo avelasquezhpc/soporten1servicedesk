@@ -1,0 +1,55 @@
+{
+  "app": "registro-rapido-n1",
+  "version": "1.6.0",
+  "exportado": "2026-09-08T18:33:22.907Z",
+  "usuarios": [],
+  "categorias": [
+    {
+      "id": "c_mtt0bms1ym0am",
+      "nombre": "Impresoras Zebra",
+      "orden": 1,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0bms1fba5u",
+      "nombre": "Terminales RF",
+      "orden": 2,
+      "activo": true
+    },
+    {
+      "id": "c_mtt0bms1v8s4g",
+      "nombre": "Red / WiFi",
+      "orden": 3,
+      "activo": true
+    }
+  ],
+  "descripciones": [
+    {
+      "id": "d_mtt0bms1yink3",
+      "texto": "Soporte Bodega Nodus",
+      "porDefecto": true,
+      "activo": true
+    },
+    {
+      "id": "d_mtt0bms1jjjr7",
+      "texto": "Mantenimiento Preventivo",
+      "porDefecto": false,
+      "activo": true
+    }
+  ],
+  "destinatarios": [],
+  "preferencias": {
+    "separador": " - ",
+    "firma": "Registrado desde Registro Rápido N1",
+    "descripcionFijada": "",
+    "usuarioFijado": "",
+    "fijarDescripcion": false,
+    "fijarUsuario": false,
+    "modoEnvio": "auto",
+    "clientId": "",
+    "tenantId": "",
+    "googleClientId": "",
+    "correcciones": ""
+  },
+  "bloqueo": null
+}
