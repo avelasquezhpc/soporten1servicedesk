@@ -1,7 +1,7 @@
 /* Registro Rápido N1 · service worker
    Cache-first para el shell de la app. Nunca cachea Graph ni el login. */
 
-const CACHE = "rrn1-shell-v3";
+const CACHE = "rrn1-shell-v4";
 const SHELL = [
   "./",
   "./index.html",

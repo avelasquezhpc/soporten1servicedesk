@@ -295,6 +295,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
 <!-- ============ NUEVO REGISTRO ============ -->
 <section id="vistaRegistro" class="vista">
 
+  <div id="franjaCuenta" class="franja oculto"></div>
   <div id="franjaModo" class="franja oculto"></div>
 
   <div class="campo">
@@ -533,7 +534,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.4.0";
+const VERSION_APP = "1.5.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -908,6 +909,34 @@ function modoEfectivo() {
 
 function esModoManual(m) { return m === "mailto" || m === "gmailweb"; }
 
+function cuentaLista(via) {
+  if (via === "gmail") {
+    if (tokenGoogle && Date.now() < tokenGoogle.expira) return true;
+    return googleAutorizado;   // ya autorizó antes: el permiso se renueva solo al enviar
+  }
+  if (via === "graph") {
+    return !!(msalApp && msalApp.getActiveAccount && msalApp.getActiveAccount());
+  }
+  return true;
+}
+
+/* Un solo botón, en la pantalla principal, para que el técnico autorice su
+   teléfono sin entrar a Ajustes ni tocar ningún dato de configuración. */
+function pintarFranjaCuenta() {
+  const f = $("#franjaCuenta");
+  if (!f) return;
+  const via = modoEfectivo();
+  if (esModoManual(via) || cuentaLista(via)) { f.className = "franja oculto"; return; }
+  const cual = via === "gmail" ? "Gmail" : "Outlook";
+  f.className = "franja aviso";
+  f.innerHTML = ICO.alerta +
+    "<div>Este teléfono todavía no está autorizado para enviar por " + cual +
+    ". Se hace una sola vez, con tu propia cuenta, y no tenés que escribir ninguna configuración." +
+    '<div class="btn-grupo"><button class="btn senal" id="btnAutorizar">Conectar ' + cual + "</button></div></div>";
+  const b = $("#btnAutorizar");
+  if (b) b.addEventListener("click", () => conectarSegun(via));
+}
+
 async function enviarPorApi(reg) {
   if ((reg.via || "graph") === "gmail") return enviarPorGmail(reg);
   return enviarPorGraph(reg);
@@ -918,8 +947,10 @@ async function conectarSegun(modo) {
     try {
       const t = await pedirTokenGoogle(true);
       await traerCorreoGoogle(t);
+      marcarAutorizacion(true);
       pintarEstadoGoogle();
-      toast("Gmail autorizado.", "ok");
+      pintarFranjaCuenta();
+      toast("Gmail autorizado en este teléfono.", "ok");
       procesarCola(false);
     } catch (e) {
       toast(e.message || "No se pudo autorizar Gmail.", "malo");
@@ -1744,6 +1775,12 @@ const SCOPES_GOOGLE = "https://www.googleapis.com/auth/gmail.send email";
 let clienteGoogle = null;
 let tokenGoogle = null;                                  // { valor, expira }
 let correoGoogle = almacen.leer("correoGoogle", "");     // solo para mostrarlo
+let googleAutorizado = almacen.leer("googleAutorizado", false);  // este teléfono ya pasó por Google
+
+function marcarAutorizacion(ok) {
+  googleAutorizado = !!ok;
+  almacen.escribir("googleAutorizado", googleAutorizado);
+}
 
 function cargarGIS() {
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
@@ -1859,6 +1896,7 @@ async function enviarPorGmail(reg) {
     } catch (e) { /* sin cuerpo */ }
     if (r.status === 401 || r.status === 403) {
       tokenGoogle = null;
+      marcarAutorizacion(false);
       throw new ErrorSesion(detalle || "Autorización de Gmail vencida");
     }
     const err = new Error("Gmail respondió " + r.status + (detalle ? ": " + detalle : ""));
@@ -2105,6 +2143,8 @@ async function enviar() {
       await encolar(reg);
       limpiarFormulario();
       estadoBoton("listo", "Enviar registro");
+      if (modo === "gmail") marcarAutorizacion(false);
+      pintarFranjaCuenta();
       toast("Hay que autorizar la cuenta. El registro quedó en cola y sale al volver.", "malo");
       setTimeout(() => conectarSegun(modo), 900);
       return;
@@ -2585,7 +2625,7 @@ function mostrarVista(nombre) {
   if (nombre === "ajustes") pintarAjustes();
   if (nombre === "historial") pintarHistorial();
   if (nombre === "bloqueo") pintarBloqueo();
-  if (nombre === "registro") pintarChips();
+  if (nombre === "registro") { pintarChips(); pintarFranjaCuenta(); }
   window.scrollTo(0, 0);
 }
 
@@ -2627,6 +2667,7 @@ if ("serviceWorker" in navigator) {
     }
   }
   actualizarFranja();
+  pintarFranjaCuenta();
 })();
 </script>
 </body>
