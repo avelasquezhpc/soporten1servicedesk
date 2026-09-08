@@ -548,7 +548,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.7.0";
+const VERSION_APP = "1.7.1";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -1261,9 +1261,15 @@ function iniciarDictado(continuacion) {
 
 function detenerDictado() {
   deseaDictar = false;
-  if (recon) { try { recon.stop(); } catch (e) { /* ya detenido */ } }
-  el.texto.value = quitarRepetidos(el.texto.value);
-  el.texto.value = puntuar(el.texto.value);
+  /* stop() entrega un último resultado con retraso. Si ese evento llega
+     después de guardar el texto en textoBase, el onresult vuelve a pegar
+     todo lo dictado y queda duplicado. Por eso se desconectan los manejadores
+     y se aborta: lo ya transcrito está en el campo y no se pierde nada. */
+  soltarRecon(recon);
+  recon = null;
+  clearInterval(tDic);
+  tDic = null;
+  el.texto.value = puntuar(pulirTexto(el.texto.value));
   textoBase = el.texto.value;
   finalAcum = "";
   pintarDictado();
