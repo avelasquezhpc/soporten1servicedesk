@@ -437,27 +437,11 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
       <div class="campo">
         <label class="rotulo" for="selModo">Cómo se envía el correo</label>
         <select id="selModo">
-          <option value="auto">Automático — la API que esté configurada</option>
-          <option value="gmail">Gmail — envía solo desde la cuenta de Gmail</option>
-          <option value="gmailweb">Gmail web — abre el redactor y confirmás vos</option>
+          <option value="auto">Automático — Graph si hay cuenta, si no la app de correo</option>
           <option value="graph">Microsoft Graph — envía solo desde Outlook 365</option>
           <option value="mailto">mailto: — abre la app de correo del teléfono</option>
         </select>
       </div>
-      <div id="bloqueGoogle">
-        <p class="ayuda">Gmail envía el correo solo, sin abrir nada. Necesita un ID de cliente OAuth creado en Google Cloud Console, tipo <b>Aplicación web</b>. El «client secret» no se usa ni se guarda.</p>
-        <div class="campo">
-          <label class="rotulo" for="inpGoogleId">Client ID de Google</label>
-          <input type="text" id="inpGoogleId" spellcheck="false" autocapitalize="off" placeholder="1234567890-abc.apps.googleusercontent.com">
-        </div>
-        <p class="ayuda">Origen autorizado de JavaScript que hay que registrar en Google:<br><code id="origenJS"></code></p>
-        <div id="estadoGoogle" class="franja"></div>
-        <div class="btn-grupo">
-          <button class="btn" id="btnConectarGoogle">Conectar Gmail</button>
-          <button class="btn" id="btnSalirGoogle">Salir de Gmail</button>
-        </div>
-      </div>
-
       <div id="bloqueMicrosoft">
         <p class="ayuda">Graph envía el correo solo, sin abrir Outlook. Necesita un registro de aplicación en Azure. Pegá aquí el <b>Application (client) ID</b> y el <b>Directory (tenant) ID</b>.</p>
         <div class="campo">
@@ -548,7 +532,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.7.4";
+const VERSION_APP = "1.8.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -707,9 +691,10 @@ const PREFS_DEF = {
   modoEnvio: "auto",
   clientId: "",
   tenantId: "",
-  googleClientId: "",
   correcciones: ""
 };
+
+const MODOS_VALIDOS = ["auto", "graph", "mailto"];
 
 const estado = {
   usuarios: almacen.leer("usuarios", null),
@@ -737,6 +722,12 @@ if (estado.categorias === null) {
     { id: uid("c"), nombre: "Terminales RF", orden: 2, activo: true },
     { id: uid("c"), nombre: "Red / WiFi", orden: 3, activo: true }
   ];
+}
+
+// Un modo de una versión anterior (gmail, gmailweb) ya no existe: vuelve a auto.
+if (MODOS_VALIDOS.indexOf(estado.prefs.modoEnvio) < 0) {
+  estado.prefs.modoEnvio = "auto";
+  almacen.escribir("prefs", estado.prefs);
 }
 
 function guardar(clave) {
@@ -938,17 +929,12 @@ function modoEfectivo() {
   // Con cuenta corporativa cargada, Graph va primero: el correo sale de un
   // buzón de la organización, sin banner de remitente externo.
   if (p.clientId && p.tenantId) return "graph";
-  if (p.googleClientId) return "gmail";
   return "mailto";
 }
 
-function esModoManual(m) { return m === "mailto" || m === "gmailweb"; }
+function esModoManual(m) { return m === "mailto"; }
 
 function cuentaLista(via) {
-  if (via === "gmail") {
-    if (tokenGoogle && Date.now() < tokenGoogle.expira) return true;
-    return googleAutorizado;   // ya autorizó antes: el permiso se renueva solo al enviar
-  }
   if (via === "graph") {
     return !!(msalApp && msalApp.getActiveAccount && msalApp.getActiveAccount());
   }
@@ -962,7 +948,7 @@ function pintarFranjaCuenta() {
   if (!f) return;
   const via = modoEfectivo();
   if (esModoManual(via) || cuentaLista(via)) { f.className = "franja oculto"; return; }
-  const cual = via === "gmail" ? "Gmail" : "Outlook";
+  const cual = "Outlook";
   f.className = "franja aviso";
   f.innerHTML = ICO.alerta +
     "<div>Este teléfono todavía no está autorizado para enviar por " + cual +
@@ -972,31 +958,11 @@ function pintarFranjaCuenta() {
   if (b) b.addEventListener("click", () => conectarSegun(via));
 }
 
-/* La cola guarda con qué vía se creó el registro, pero si la cuenta cambió
-   —por ejemplo, se pasó de Gmail a Graph— los pendientes salen por la ruta
-   que esté configurada ahora, no por la que ya no sirve. */
 async function enviarPorApi(reg) {
-  const actual = modoEfectivo();
-  const via = esModoManual(actual) ? (reg.via || "graph") : actual;
-  if (via === "gmail") return enviarPorGmail(reg);
   return enviarPorGraph(reg);
 }
 
-async function conectarSegun(modo) {
-  if (modo === "gmail") {
-    try {
-      const t = await pedirTokenGoogle(true);
-      await traerCorreoGoogle(t);
-      marcarAutorizacion(true);
-      pintarEstadoGoogle();
-      pintarFranjaCuenta();
-      toast("Gmail autorizado en este teléfono.", "ok");
-      procesarCola(false);
-    } catch (e) {
-      toast(e.message || "No se pudo autorizar Gmail.", "malo");
-    }
-    return;
-  }
+function conectarSegun() {
   iniciarSesion();
 }
 
@@ -1007,8 +973,7 @@ function actualizarFranja() {
   if (!activos(estado.usuarios).length) avisos.push("Cargá tu usuario técnico en Ajustes para que el asunto lleve tu código.");
   const via = modoEfectivo();
   if (via === "mailto") avisos.push("Modo mailto: el correo se arma acá pero el envío lo confirmás vos en la app de correo.");
-  if (via === "gmailweb") avisos.push("Modo Gmail web: se abre el redactor de Gmail y el envío lo confirmás vos.");
-  if (via === "gmail" && !estado.prefs.googleClientId) avisos.push("Falta el Client ID de Google en Ajustes: no se puede enviar por Gmail.");
+  if (via === "graph" && !(estado.prefs.clientId && estado.prefs.tenantId)) avisos.push("Faltan el Client ID y el Tenant ID en Ajustes: no se puede enviar por Outlook.");
   if (!almacenOk) avisos.push("El almacenamiento del navegador está bloqueado: los cambios no se conservarán.");
 
   if (!avisos.length) { el.franjaModo.classList.add("oculto"); return; }
@@ -1649,11 +1614,7 @@ function pintarAjustes() {
   $("#inpClientId").value = estado.prefs.clientId;
   $("#inpTenantId").value = estado.prefs.tenantId;
   $("#redirectUri").textContent = location.origin + location.pathname;
-  $("#origenJS").textContent = location.origin;
-  $("#inpGoogleId").value = estado.prefs.googleClientId;
   $("#inpCorrecciones").value = estado.prefs.correcciones;
-  pintarBloquesCuenta();
-  pintarEstadoGoogle();
   pintarVersiones();
   probarDictado();
   const cd = $("#secDictado summary .cuenta");
@@ -1690,41 +1651,11 @@ $("#selModo").addEventListener("change", (ev) => {
   estado.prefs.modoEnvio = ev.target.value;
   guardar("prefs");
   actualizarFranja();
-  pintarBloquesCuenta();
   pintarEstadoCuenta();
-  pintarEstadoGoogle();
+  pintarFranjaCuenta();
 });
-
-function pintarBloquesCuenta() {
-  const via = modoEfectivo();
-  const auto = estado.prefs.modoEnvio === "auto";
-  $("#bloqueGoogle").classList.toggle("oculto", !(auto || via === "gmail" || via === "gmailweb"));
-  $("#bloqueMicrosoft").classList.toggle("oculto", !(auto || via === "graph"));
-}
 $("#inpClientId").addEventListener("input", (ev) => { estado.prefs.clientId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
 $("#inpTenantId").addEventListener("input", (ev) => { estado.prefs.tenantId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
-
-$("#inpGoogleId").addEventListener("input", (ev) => {
-  estado.prefs.googleClientId = ev.target.value.trim();
-  guardar("prefs");
-  clienteGoogle = null;
-  tokenGoogle = null;
-  actualizarFranja();
-  pintarEstadoGoogle();
-});
-
-$("#btnConectarGoogle").addEventListener("click", () => conectarSegun("gmail"));
-
-$("#btnSalirGoogle").addEventListener("click", () => {
-  if (tokenGoogle && window.google && google.accounts && google.accounts.oauth2) {
-    try { google.accounts.oauth2.revoke(tokenGoogle.valor); } catch (e) { /* ya revocado */ }
-  }
-  tokenGoogle = null;
-  correoGoogle = "";
-  almacen.borrar("correoGoogle");
-  pintarEstadoGoogle();
-  toast("Se cerró la sesión de Gmail en este teléfono.");
-});
 
 function probarDictado() {
   const inp = $("#pruebaDictado"), out = $("#salidaPrueba");
@@ -1864,177 +1795,6 @@ $("#btnDesconectar").addEventListener("click", async () => {
     toast(e.message || "No se pudo cerrar la sesión.", "malo");
   }
 });
-
-/* =======================================================================
-   GMAIL — Google Identity Services (OAuth 2.0, token de navegador)
-   Sin client secret y sin servidor: el token vive en memoria y dura una
-   hora. Se pide de nuevo solo cuando hace falta.
-   ======================================================================= */
-
-const GIS_CDN = "https://accounts.google.com/gsi/client";
-const SCOPES_GOOGLE = "https://www.googleapis.com/auth/gmail.send email";
-let clienteGoogle = null;
-let tokenGoogle = null;                                  // { valor, expira }
-let correoGoogle = almacen.leer("correoGoogle", "");     // solo para mostrarlo
-let googleAutorizado = almacen.leer("googleAutorizado", false);  // este teléfono ya pasó por Google
-
-function marcarAutorizacion(ok) {
-  googleAutorizado = !!ok;
-  almacen.escribir("googleAutorizado", googleAutorizado);
-}
-
-function cargarGIS() {
-  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const sc = document.createElement("script");
-    sc.src = GIS_CDN;
-    sc.async = true;
-    sc.onload = () => resolve();
-    sc.onerror = () => reject(new Error("No se pudo cargar la librería de Google. Necesitás conexión la primera vez."));
-    document.head.appendChild(sc);
-  });
-}
-
-async function clienteToken() {
-  const id = estado.prefs.googleClientId;
-  if (!id) throw new Error("Falta el Client ID de Google en Ajustes.");
-  await cargarGIS();
-  if (!clienteGoogle) {
-    clienteGoogle = google.accounts.oauth2.initTokenClient({
-      client_id: id,
-      scope: SCOPES_GOOGLE,
-      callback: () => {}
-    });
-  }
-  return clienteGoogle;
-}
-
-function pedirTokenGoogle(interactivo) {
-  return new Promise((resolve, reject) => {
-    clienteToken().then((c) => {
-      c.callback = (resp) => {
-        if (resp && resp.access_token) {
-          const dura = (resp.expires_in ? resp.expires_in * 1000 : 3600000) - 60000;
-          tokenGoogle = { valor: resp.access_token, expira: Date.now() + dura };
-          resolve(resp.access_token);
-        } else {
-          reject(new ErrorSesion((resp && resp.error) || "Google no entregó autorización"));
-        }
-      };
-      c.error_callback = (err) => reject(new ErrorSesion((err && err.type) || "Se canceló la autorización de Google"));
-      try {
-        c.requestAccessToken({ prompt: interactivo ? "consent" : "" });
-      } catch (e) {
-        reject(new ErrorSesion("No se pudo abrir la ventana de Google"));
-      }
-    }).catch(reject);
-  });
-}
-
-async function tokenGmail() {
-  if (tokenGoogle && Date.now() < tokenGoogle.expira) return tokenGoogle.valor;
-  return pedirTokenGoogle(false);
-}
-
-async function traerCorreoGoogle(token) {
-  try {
-    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: "Bearer " + token }
-    });
-    if (!r.ok) return "";
-    const j = await r.json();
-    correoGoogle = j.email || "";
-    almacen.escribir("correoGoogle", correoGoogle);
-    return correoGoogle;
-  } catch (e) { return ""; }
-}
-
-/* ---- Armado del mensaje RFC 822: base64 en cuerpo y encabezados, para
-   que las tildes y la ñ lleguen intactas al sistema de tickets ---- */
-
-function utf8(txt) { return new TextEncoder().encode(txt); }
-
-function b64url(bytes) {
-  return b64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function cabeceraUTF8(txt) {
-  return "=?UTF-8?B?" + b64(utf8(txt)) + "?=";
-}
-
-function partir76(txt) {
-  return txt.replace(/(.{76})/g, "$1\r\n");
-}
-
-function armarMIME(reg) {
-  const lista = (arr) => arr.map((r) => (r.nombre ? cabeceraUTF8(r.nombre) + " <" + r.email + ">" : r.email)).join(", ");
-  const h = [];
-  if (reg.para.length) h.push("To: " + lista(reg.para));
-  if (reg.cc.length) h.push("Cc: " + lista(reg.cc));
-  if (reg.cco.length) h.push("Bcc: " + lista(reg.cco));
-  h.push("Subject: " + cabeceraUTF8(reg.asunto));
-  h.push("MIME-Version: 1.0");
-  h.push('Content-Type: text/plain; charset="UTF-8"');
-  h.push("Content-Transfer-Encoding: base64");
-  return h.join("\r\n") + "\r\n\r\n" + partir76(b64(utf8(reg.cuerpo)));
-}
-
-async function enviarPorGmail(reg) {
-  const token = await tokenGmail();
-  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json; charset=utf-8"
-    },
-    body: JSON.stringify({ raw: b64url(utf8(armarMIME(reg))) })
-  });
-  if (!r.ok) {
-    let detalle = "";
-    try {
-      const j = await r.json();
-      detalle = (j && j.error && j.error.message) ? j.error.message : "";
-    } catch (e) { /* sin cuerpo */ }
-    if (r.status === 401 || r.status === 403) {
-      tokenGoogle = null;
-      marcarAutorizacion(false);
-      throw new ErrorSesion(detalle || "Autorización de Gmail vencida");
-    }
-    const err = new Error("Gmail respondió " + r.status + (detalle ? ": " + detalle : ""));
-    err.http = r.status;
-    throw err;
-  }
-}
-
-function abrirGmailWeb(reg) {
-  const q = new URLSearchParams();
-  q.set("view", "cm");
-  q.set("fs", "1");
-  q.set("to", reg.para.map((r) => r.email).join(","));
-  if (reg.cc.length) q.set("cc", reg.cc.map((r) => r.email).join(","));
-  if (reg.cco.length) q.set("bcc", reg.cco.map((r) => r.email).join(","));
-  q.set("su", reg.asunto);
-  q.set("body", reg.cuerpo);
-  window.open("https://mail.google.com/mail/?" + q.toString(), "_blank", "noopener");
-}
-
-function pintarEstadoGoogle() {
-  const caja = $("#estadoGoogle");
-  if (!caja) return;
-  if (!estado.prefs.googleClientId) {
-    caja.className = "franja";
-    caja.innerHTML = ICO.alerta + "<div>Sin Client ID de Google la app no puede enviar sola por Gmail.</div>";
-    return;
-  }
-  if (tokenGoogle && Date.now() < tokenGoogle.expira) {
-    caja.className = "franja";
-    caja.innerHTML = ICO.ok + "<div>Gmail autorizado" + (correoGoogle ? ": <b>" + esc(correoGoogle) + "</b>" : "") + "</div>";
-  } else {
-    caja.className = "franja aviso";
-    caja.innerHTML = ICO.alerta + "<div>" + (correoGoogle ? "Última cuenta usada: <b>" + esc(correoGoogle) + "</b>. " : "") +
-      "La autorización dura una hora; se renueva sola al enviar.</div>";
-  }
-}
 
 /* ------------------------------ Armado del correo ------------------------- */
 
@@ -2204,13 +1964,12 @@ async function enviar() {
   estadoBoton("enviando", "Enviando…");
 
   if (esModoManual(modo)) {
-    const enGmail = modo === "gmailweb";
     reg.estado = "manual";
     agregarHistorial(reg);
-    if (enGmail) abrirGmailWeb(reg); else abrirMailto(reg);
-    estadoBoton("enviado", enGmail ? "Abierto en Gmail" : "Abierto en el correo");
+    abrirMailto(reg);
+    estadoBoton("enviado", "Abierto en el correo");
     vibrar(30);
-    toast(enGmail ? "Se abrió Gmail. Confirmá el envío ahí." : "Se abrió tu app de correo. Confirmá el envío ahí.", "ok");
+    toast("Se abrió tu app de correo. Confirmá el envío ahí.", "ok");
     limpiarFormulario();
     setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
     return;
@@ -2244,10 +2003,9 @@ async function enviar() {
       await encolar(reg);
       limpiarFormulario();
       estadoBoton("listo", "Enviar registro");
-      if (modo === "gmail") marcarAutorizacion(false);
       pintarFranjaCuenta();
       toast("Hay que autorizar la cuenta. El registro quedó en cola y sale al volver.", "malo");
-      setTimeout(() => conectarSegun(modo), 900);
+      setTimeout(conectarSegun, 900);
       return;
     }
     if (e && e.http) {
@@ -2786,16 +2544,22 @@ $("#cuerpoVersiones").addEventListener("keydown", (ev) => {
    es el permiso de escritura del repositorio, no esta contraseña.
    ======================================================================= */
 
-const CLAVES_ADMIN = ["separador", "firma", "modoEnvio", "clientId", "tenantId", "googleClientId", "correcciones"];
+const CLAVES_ADMIN = ["separador", "firma", "modoEnvio", "clientId", "tenantId", "correcciones"];
 let configRemota = almacen.leer("configSello", null);   // { sello, leida }
 
 function aplicarConfig(datos) {
   CLAVES_CATALOGO.forEach((k) => { if (Array.isArray(datos[k])) estado[k] = datos[k]; });
   if (datos.preferencias && typeof datos.preferencias === "object") {
     CLAVES_ADMIN.forEach((k) => {
-      if (datos.preferencias[k] !== undefined) estado.prefs[k] = datos.preferencias[k];
+      const v = datos.preferencias[k];
+      if (v === undefined || v === null) return;
+      // Un valor vacío en el archivo publicado no borra lo que ya tiene el
+      // teléfono: así se puede cargar el Client ID acá y publicarlo después.
+      if (typeof v === "string" && !v.trim() && String(estado.prefs[k] || "").trim()) return;
+      estado.prefs[k] = v;
     });
   }
+  if (MODOS_VALIDOS.indexOf(estado.prefs.modoEnvio) < 0) estado.prefs.modoEnvio = "auto";
   // El bloqueo publicado manda: borrar los datos del navegador ya no lo quita.
   if (datos.bloqueo && datos.bloqueo.hash && datos.bloqueo.sal) {
     bloqueo = datos.bloqueo;
