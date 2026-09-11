@@ -1,7 +1,7 @@
 {
   "app": "registro-rapido-n1",
-  "version": "1.8.2",
-  "exportado": "2026-09-11T04:12:12.028Z",
+  "version": "1.9.0",
+  "exportado": "2026-09-11T04:25:46.862Z",
   "usuarios": [
     {
       "id": "u_mtt0degfxavkb",
@@ -206,8 +206,8 @@
     "fijarDest": false,
     "destFijados": [],
     "modoEnvio": "auto",
-    "clientId": "",
-    "tenantId": "",
+    "clientId": "68428a38-2d2c-462e-a43c-dadec7899907",
+    "tenantId": "fd036aaa-6091-4578-adb3-0b6d156fecad",
     "correcciones": ""
   },
   "bloqueo": {
