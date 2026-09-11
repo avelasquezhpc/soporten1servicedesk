@@ -548,7 +548,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.7.3";
+const VERSION_APP = "1.7.4";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -935,8 +935,10 @@ el.panelDest.addEventListener("change", (ev) => {
 function modoEfectivo() {
   const p = estado.prefs;
   if (p.modoEnvio && p.modoEnvio !== "auto") return p.modoEnvio;
-  if (p.googleClientId) return "gmail";
+  // Con cuenta corporativa cargada, Graph va primero: el correo sale de un
+  // buzón de la organización, sin banner de remitente externo.
   if (p.clientId && p.tenantId) return "graph";
+  if (p.googleClientId) return "gmail";
   return "mailto";
 }
 
