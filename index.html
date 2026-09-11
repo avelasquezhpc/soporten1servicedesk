@@ -421,12 +421,12 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
       <p class="ayuda">Plantilla fija: <code>{descripcion}{sep}{codigo}{sep}{categoria}</code>. Los segmentos vacíos se omiten junto con su separador.</p>
       <div class="campo">
         <label class="rotulo" for="inpSeparador">Separador</label>
-        <input type="text" id="inpSeparador" maxlength="10" spellcheck="false">
+        <input type="text" id="inpSeparador" name="rrn1-separador" autocomplete="off" data-lpignore="true" data-form-type="other" maxlength="10" spellcheck="false">
       </div>
       <p class="ayuda">Ejemplo con los valores actuales:<br><code id="ejemploAsunto"></code></p>
       <div class="campo">
         <label class="rotulo" for="inpFirma">Firma al pie del correo</label>
-        <input type="text" id="inpFirma" maxlength="80">
+        <input type="text" id="inpFirma" name="rrn1-firma" autocomplete="off" data-lpignore="true" data-form-type="other" maxlength="80">
       </div>
     </div>
   </details>
@@ -444,16 +444,31 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
       </div>
       <div id="bloqueMicrosoft">
         <p class="ayuda">Graph envía el correo solo, sin abrir Outlook. Necesita un registro de aplicación en Azure. Pegá aquí el <b>Application (client) ID</b> y el <b>Directory (tenant) ID</b>.</p>
-        <div class="campo">
-          <label class="rotulo" for="inpClientId">Client ID</label>
-          <input type="text" id="inpClientId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
-          <p class="error-campo oculto" id="errClientId"></p>
+        <div id="resumenIds" class="oculto">
+          <p class="ayuda">Client ID guardado: <code id="verClientId"></code><br>
+             Tenant ID guardado: <code id="verTenantId"></code></p>
+          <div class="btn-grupo">
+            <button class="btn chico" id="btnCambiarIds">Cambiar identificadores</button>
+          </div>
         </div>
-        <div class="campo">
-          <label class="rotulo" for="inpTenantId">Tenant ID</label>
-          <input type="text" id="inpTenantId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
-          <p class="error-campo oculto" id="errTenantId"></p>
+
+        <div id="editorIds">
+          <div class="campo">
+            <label class="rotulo" for="inpClientId">Client ID</label>
+            <input type="text" id="inpClientId" name="rrn1-client-id" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
+            <p class="error-campo oculto" id="errClientId"></p>
+          </div>
+          <div class="campo">
+            <label class="rotulo" for="inpTenantId">Tenant ID</label>
+            <input type="text" id="inpTenantId" name="rrn1-tenant-id" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
+            <p class="error-campo oculto" id="errTenantId"></p>
+          </div>
+          <div class="btn-grupo">
+            <button class="btn senal" id="btnGuardarIds">Guardar identificadores</button>
+            <button class="btn oculto" id="btnCancelarIds">Cancelar</button>
+          </div>
         </div>
+
         <p class="ayuda">Redirect URI que hay que registrar en Azure (tipo SPA):<br><code id="redirectUri"></code></p>
         <div id="estadoCuenta" class="franja"></div>
         <div class="btn-grupo">
@@ -534,7 +549,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.8.2";
+const VERSION_APP = "1.9.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -1643,10 +1658,9 @@ function pintarAjustes() {
   $("#inpSeparador").value = estado.prefs.separador;
   $("#inpFirma").value = estado.prefs.firma;
   $("#selModo").value = estado.prefs.modoEnvio;
-  $("#inpClientId").value = estado.prefs.clientId;
-  $("#inpTenantId").value = estado.prefs.tenantId;
   $("#redirectUri").textContent = location.origin + location.pathname;
   $("#inpCorrecciones").value = estado.prefs.correcciones;
+  pintarIdentificadores();
   pintarVersiones();
   probarDictado();
   const cd = $("#secDictado summary .cuenta");
@@ -1686,17 +1700,82 @@ $("#selModo").addEventListener("change", (ev) => {
   pintarEstadoCuenta();
   pintarFranjaCuenta();
 });
-function guardarIdentificador(clave, valor) {
-  estado.prefs[clave] = String(valor || "").trim();
-  guardar("prefs");
-  msalApp = null;
-  actualizarFranja();
+/* Los identificadores se guardan solo cuando se toca «Guardar»: nada de
+   guardar por tecla, que era la puerta por la que entraba el autocompletado
+   del navegador. Una vez guardados quedan a la vista, pero fuera de alcance
+   hasta que se pida cambiarlos. */
+let editandoIds = false;
+
+function recorte(v) {
+  const t = String(v || "");
+  return t.length > 14 ? t.slice(0, 8) + "…" + t.slice(-4) : t;
+}
+
+function tieneIds() {
+  return clientIdValido(estado.prefs.clientId) && tenantIdValido(estado.prefs.tenantId);
+}
+
+function pintarIdentificadores() {
+  const guardados = tieneIds();
+  const mostrarEditor = editandoIds || !guardados;
+
+  $("#resumenIds").classList.toggle("oculto", mostrarEditor);
+  $("#editorIds").classList.toggle("oculto", !mostrarEditor);
+  $("#btnCancelarIds").classList.toggle("oculto", !(editandoIds && guardados));
+
+  if (!mostrarEditor) {
+    $("#verClientId").textContent = recorte(estado.prefs.clientId);
+    $("#verTenantId").textContent = recorte(estado.prefs.tenantId);
+  } else {
+    $("#inpClientId").value = estado.prefs.clientId || "";
+    $("#inpTenantId").value = estado.prefs.tenantId || "";
+  }
   pintarEstadoCuenta();
 }
 
-["input", "change", "blur"].forEach((evento) => {
-  $("#inpClientId").addEventListener(evento, (ev) => guardarIdentificador("clientId", ev.target.value));
-  $("#inpTenantId").addEventListener(evento, (ev) => guardarIdentificador("tenantId", ev.target.value));
+$("#btnCambiarIds").addEventListener("click", () => {
+  editandoIds = true;
+  pintarIdentificadores();
+  $("#inpClientId").focus();
+});
+
+$("#btnCancelarIds").addEventListener("click", () => {
+  editandoIds = false;
+  marcarError("errClientId", "");
+  marcarError("errTenantId", "");
+  pintarIdentificadores();
+});
+
+$("#btnGuardarIds").addEventListener("click", () => {
+  const cid = $("#inpClientId").value.trim();
+  const tid = $("#inpTenantId").value.trim();
+  let mal = false;
+
+  if (!clientIdValido(cid)) {
+    marcarError("errClientId", cid
+      ? "Ese valor no es un GUID. Copialo de Azure → Overview → Application (client) ID."
+      : "Pegá el Application (client) ID de Azure.");
+    mal = true;
+  } else { marcarError("errClientId", ""); }
+
+  if (!tenantIdValido(tid)) {
+    marcarError("errTenantId", tid
+      ? "Ese valor no sirve como Tenant ID. Usá el GUID del directorio, el dominio u «organizations»."
+      : "Pegá el Directory (tenant) ID de Azure.");
+    mal = true;
+  } else { marcarError("errTenantId", ""); }
+
+  if (mal) return;
+
+  estado.prefs.clientId = cid;
+  estado.prefs.tenantId = tid;
+  guardar("prefs");
+  msalApp = null;
+  editandoIds = false;
+  actualizarFranja();
+  pintarIdentificadores();
+  pintarFranjaCuenta();
+  toast("Identificadores guardados en este teléfono.", "ok");
 });
 
 function probarDictado() {
@@ -1826,13 +1905,6 @@ function marcarError(idCampo, mensaje) {
 function pintarEstadoCuenta() {
   const caja = $("#estadoCuenta");
   const p = estado.prefs;
-
-  marcarError("errClientId", p.clientId && !clientIdValido(p.clientId)
-    ? "No parece un Client ID: tiene que ser el GUID de Azure, con sus cinco grupos separados por guiones."
-    : "");
-  marcarError("errTenantId", p.tenantId && !tenantIdValido(p.tenantId)
-    ? "No parece un Tenant ID: usá el GUID del directorio, el dominio de la organización u «organizations»."
-    : "");
 
   if (!p.clientId || !p.tenantId) {
     caja.className = "franja";
@@ -2096,14 +2168,23 @@ async function enviar() {
       setTimeout(() => estadoBoton("listo", "Enviar registro"), 3500);
       return;
     }
-    // Fallo de red o de carga de la librería: se encola.
-    reg.estado = "pendiente";
+    const esRed = (e instanceof TypeError) || !navigator.onLine;
+    if (esRed) {
+      reg.estado = "pendiente";
+      agregarHistorial(reg);
+      await encolar(reg);
+      limpiarFormulario();
+      estadoBoton("enviado", "Guardado en cola");
+      toast("No se pudo salir a la red: quedó en cola.", "malo");
+      setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
+      return;
+    }
+    // Falta de configuración: encolar no sirve, hay que arreglarlo en Ajustes.
+    reg.estado = "error";
     agregarHistorial(reg);
-    await encolar(reg);
-    limpiarFormulario();
-    estadoBoton("enviado", "Guardado en cola");
-    toast("No se pudo salir a la red: quedó en cola.", "malo");
-    setTimeout(() => estadoBoton("listo", "Enviar registro"), 2500);
+    estadoBoton("error", "No se envió");
+    toast(e.message || "No se pudo enviar el registro.", "malo");
+    setTimeout(() => estadoBoton("listo", "Enviar registro"), 4000);
   }
 }
 
@@ -2638,8 +2719,17 @@ function aplicarConfig(datos) {
       if (typeof v === "string" && !v.trim() && String(estado.prefs[k] || "").trim()) return;
       // Un identificador con formato inválido en el archivo publicado se
       // descarta: si no, pisa el que se acaba de cargar a mano.
-      if (k === "clientId" && v && !clientIdValido(v)) return;
-      if (k === "tenantId" && v && !tenantIdValido(v)) return;
+      // Identificadores: solo se aceptan del archivo publicado si el teléfono
+      // todavía no tiene unos válidos guardados. Una vez cargados acá, mandan
+      // los del teléfono hasta que alguien toque «Cambiar identificadores».
+      if (k === "clientId") {
+        if (!clientIdValido(v)) return;
+        if (clientIdValido(estado.prefs.clientId)) return;
+      }
+      if (k === "tenantId") {
+        if (!tenantIdValido(v)) return;
+        if (tenantIdValido(estado.prefs.tenantId)) return;
+      }
       estado.prefs[k] = v;
     });
   }
