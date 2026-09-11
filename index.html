@@ -447,10 +447,12 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
         <div class="campo">
           <label class="rotulo" for="inpClientId">Client ID</label>
           <input type="text" id="inpClientId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000">
+          <p class="error-campo oculto" id="errClientId"></p>
         </div>
         <div class="campo">
           <label class="rotulo" for="inpTenantId">Tenant ID</label>
           <input type="text" id="inpTenantId" spellcheck="false" autocapitalize="off" placeholder="00000000-0000-0000-0000-000000000000 u «organizations»">
+          <p class="error-campo oculto" id="errTenantId"></p>
         </div>
         <p class="ayuda">Redirect URI que hay que registrar en Azure (tipo SPA):<br><code id="redirectUri"></code></p>
         <div id="estadoCuenta" class="franja"></div>
@@ -532,7 +534,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.8.0";
+const VERSION_APP = "1.8.1";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -557,6 +559,21 @@ function normalizarEspacios(s) {
 
 function sinAcentos(s) {
   return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+const RE_GUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+function clientIdValido(v) {
+  return RE_GUID.test(String(v || "").trim());
+}
+
+/* El tenant admite el GUID del directorio, una palabra clave de Microsoft
+   o el dominio de la organización. */
+function tenantIdValido(v) {
+  const t = String(v || "").trim();
+  if (RE_GUID.test(t)) return true;
+  if (["organizations", "common", "consumers"].indexOf(t.toLowerCase()) >= 0) return true;
+  return /^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+$/.test(t);
 }
 
 function emailValido(v) {
@@ -936,7 +953,8 @@ function esModoManual(m) { return m === "mailto"; }
 
 function cuentaLista(via) {
   if (via === "graph") {
-    return !!(msalApp && msalApp.getActiveAccount && msalApp.getActiveAccount());
+    if (msalApp && msalApp.getActiveAccount && msalApp.getActiveAccount()) return true;
+    return !!cuentaRecordada;   // ya inició sesión acá: MSAL la retoma sola
   }
   return true;
 }
@@ -1654,8 +1672,21 @@ $("#selModo").addEventListener("change", (ev) => {
   pintarEstadoCuenta();
   pintarFranjaCuenta();
 });
-$("#inpClientId").addEventListener("input", (ev) => { estado.prefs.clientId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
-$("#inpTenantId").addEventListener("input", (ev) => { estado.prefs.tenantId = ev.target.value.trim(); guardar("prefs"); msalApp = null; actualizarFranja(); });
+$("#inpClientId").addEventListener("input", (ev) => {
+  estado.prefs.clientId = ev.target.value.trim();
+  guardar("prefs");
+  msalApp = null;
+  actualizarFranja();
+  pintarEstadoCuenta();
+});
+
+$("#inpTenantId").addEventListener("input", (ev) => {
+  estado.prefs.tenantId = ev.target.value.trim();
+  guardar("prefs");
+  msalApp = null;
+  actualizarFranja();
+  pintarEstadoCuenta();
+});
 
 function probarDictado() {
   const inp = $("#pruebaDictado"), out = $("#salidaPrueba");
@@ -1693,6 +1724,7 @@ const MSAL_LOCAL = "./msal-browser.min.js";
 const MSAL_CDN = "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js";
 const SCOPES = ["User.Read", "Mail.Send"];
 let msalApp = null;
+let cuentaRecordada = almacen.leer("cuentaMS", "");
 
 class ErrorSesion extends Error {}
 
@@ -1742,6 +1774,11 @@ async function obtenerMsal() {
     const cuentas = msalApp.getAllAccounts();
     if (cuentas.length) msalApp.setActiveAccount(cuentas[0]);
   }
+  const activa = msalApp.getActiveAccount();
+  if (activa && activa.username) {
+    cuentaRecordada = activa.username;
+    almacen.escribir("cuentaMS", cuentaRecordada);
+  }
   return msalApp;
 }
 
@@ -1766,22 +1803,50 @@ async function iniciarSesion() {
   }
 }
 
+function marcarError(idCampo, mensaje) {
+  const e = $("#" + idCampo);
+  if (!e) return;
+  e.textContent = mensaje || "";
+  e.classList.toggle("oculto", !mensaje);
+}
+
 function pintarEstadoCuenta() {
   const caja = $("#estadoCuenta");
   const p = estado.prefs;
+
+  marcarError("errClientId", p.clientId && !clientIdValido(p.clientId)
+    ? "No parece un Client ID: tiene que ser el GUID de Azure, con sus cinco grupos separados por guiones."
+    : "");
+  marcarError("errTenantId", p.tenantId && !tenantIdValido(p.tenantId)
+    ? "No parece un Tenant ID: usá el GUID del directorio, el dominio de la organización u «organizations»."
+    : "");
+
   if (!p.clientId || !p.tenantId) {
     caja.className = "franja";
-    caja.innerHTML = ICO.alerta + "<div>Sin Client ID y Tenant ID la app arma el correo y lo abre en Outlook para que lo confirmes a mano.</div>";
+    caja.innerHTML = ICO.alerta + "<div>Sin Client ID y Tenant ID la app arma el correo y lo abre en la app de correo para que lo confirmes a mano.</div>";
     return;
   }
+  if (!clientIdValido(p.clientId) || !tenantIdValido(p.tenantId)) {
+    caja.className = "franja malo";
+    caja.innerHTML = ICO.alerta + "<div>Revisá los identificadores: con ese formato Microsoft no va a aceptar el inicio de sesión.</div>";
+    return;
+  }
+
   const cuenta = msalApp && msalApp.getActiveAccount ? msalApp.getActiveAccount() : null;
   if (cuenta) {
     caja.className = "franja";
-    caja.innerHTML = ICO.ok + "<div>Sesión activa: <b>" + esc(cuenta.username) + "</b></div>";
-  } else {
-    caja.className = "franja aviso";
-    caja.innerHTML = ICO.alerta + "<div>Datos cargados, pero sin sesión iniciada. Tocá «Conectar cuenta».</div>";
+    caja.innerHTML = ICO.ok + "<div>Conectado como <b>" + esc(cuenta.username) +
+      "</b>. La sesión queda guardada en este teléfono y se renueva sola al enviar.</div>";
+    return;
   }
+  if (cuentaRecordada) {
+    caja.className = "franja";
+    caja.innerHTML = ICO.ok + "<div>Cuenta guardada: <b>" + esc(cuentaRecordada) +
+      "</b>. Se reconecta sola al enviar; si Microsoft pide confirmación, tocá «Conectar cuenta».</div>";
+    return;
+  }
+  caja.className = "franja aviso";
+  caja.innerHTML = ICO.alerta + "<div>Identificadores correctos, falta iniciar sesión una vez. Tocá «Conectar cuenta».</div>";
 }
 
 $("#btnConectar").addEventListener("click", iniciarSesion);
@@ -1789,7 +1854,9 @@ $("#btnDesconectar").addEventListener("click", async () => {
   try {
     const app = await obtenerMsal();
     const cuenta = app.getActiveAccount();
-    if (!cuenta) { toast("No hay sesión abierta."); return; }
+    cuentaRecordada = "";
+    almacen.borrar("cuentaMS");
+    if (!cuenta) { toast("No hay sesión abierta."); pintarEstadoCuenta(); return; }
     await app.logoutRedirect({ account: cuenta });
   } catch (e) {
     toast(e.message || "No se pudo cerrar la sesión.", "malo");
@@ -2556,6 +2623,10 @@ function aplicarConfig(datos) {
       // Un valor vacío en el archivo publicado no borra lo que ya tiene el
       // teléfono: así se puede cargar el Client ID acá y publicarlo después.
       if (typeof v === "string" && !v.trim() && String(estado.prefs[k] || "").trim()) return;
+      // Un identificador con formato inválido en el archivo publicado se
+      // descarta: si no, pisa el que se acaba de cargar a mano.
+      if (k === "clientId" && v && !clientIdValido(v)) return;
+      if (k === "tenantId" && v && !tenantIdValido(v)) return;
       estado.prefs[k] = v;
     });
   }
@@ -2648,6 +2719,7 @@ if ("serviceWorker" in navigator) {
     try {
       await obtenerMsal();
       pintarEstadoCuenta();
+      pintarFranjaCuenta();
       procesarCola(false);
     } catch (e) {
       console.warn("MSAL no inicializado:", e.message);
