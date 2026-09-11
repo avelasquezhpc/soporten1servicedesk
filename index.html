@@ -548,7 +548,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.7.1";
+const VERSION_APP = "1.7.3";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -970,8 +970,13 @@ function pintarFranjaCuenta() {
   if (b) b.addEventListener("click", () => conectarSegun(via));
 }
 
+/* La cola guarda con qué vía se creó el registro, pero si la cuenta cambió
+   —por ejemplo, se pasó de Gmail a Graph— los pendientes salen por la ruta
+   que esté configurada ahora, no por la que ya no sirve. */
 async function enviarPorApi(reg) {
-  if ((reg.via || "graph") === "gmail") return enviarPorGmail(reg);
+  const actual = modoEfectivo();
+  const via = esModoManual(actual) ? (reg.via || "graph") : actual;
+  if (via === "gmail") return enviarPorGmail(reg);
   return enviarPorGraph(reg);
 }
 
@@ -1751,22 +1756,35 @@ function pintarInfoAlmacen() {
    ENVÍO — Microsoft Graph (MSAL, PKCE) y respaldo mailto:
    ======================================================================= */
 
+const MSAL_LOCAL = "./msal-browser.min.js";
 const MSAL_CDN = "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js";
 const SCOPES = ["User.Read", "Mail.Send"];
 let msalApp = null;
 
 class ErrorSesion extends Error {}
 
-function cargarMsal() {
-  if (window.msal) return Promise.resolve();
+function cargarScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = MSAL_CDN;
+    s.src = src;
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error("No se pudo cargar la librería de Microsoft. Necesitás conexión la primera vez."));
+    s.onerror = () => reject(new Error("No se pudo cargar " + src));
     document.head.appendChild(s);
   });
+}
+
+/* Primero la copia del repositorio: así la app no depende del CDN de
+   Microsoft, que los proxys corporativos suelen bloquear. Si el archivo no
+   está subido, la respuesta 404 no define window.msal y se prueba el CDN. */
+async function cargarMsal() {
+  if (window.msal) return;
+  try { await cargarScript(MSAL_LOCAL); } catch (e) { /* falta la copia local */ }
+  if (window.msal) return;
+  try { await cargarScript(MSAL_CDN); } catch (e) { /* CDN bloqueado o sin red */ }
+  if (!window.msal) {
+    throw new Error("No se pudo cargar la librería de Microsoft. Subí msal-browser.min.js al repositorio, junto al index.html.");
+  }
 }
 
 async function obtenerMsal() {

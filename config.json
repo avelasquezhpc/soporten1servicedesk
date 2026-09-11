@@ -1,7 +1,7 @@
 {
   "app": "registro-rapido-n1",
-  "version": "1.7.0",
-  "exportado": "2026-09-08T20:05:30.976Z",
+  "version": "1.7.2",
+  "exportado": "2026-09-10T23:51:50.653Z",
   "usuarios": [
     {
       "id": "u_mtt0degfxavkb",
@@ -199,14 +199,12 @@
   "preferencias": {
     "separador": " - ",
     "firma": "Realizado desde Registro Rápido N1",
-    "descripcionFijada": "",
-    "usuarioFijado": "",
-    "fijarDescripcion": false,
-    "fijarUsuario": false,
-    "fijarDest": true,
-    "destFijados": [
-      "r_mtt2u33asz88r"
-    ],
+    "descripcionFijada": "d_mtt0bms1yink3",
+    "usuarioFijado": "u_mtt0dxguykbsi",
+    "fijarDescripcion": true,
+    "fijarUsuario": true,
+    "fijarDest": false,
+    "destFijados": [],
     "modoEnvio": "auto",
     "clientId": "",
     "tenantId": "",
