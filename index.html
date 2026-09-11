@@ -534,7 +534,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.8.1";
+const VERSION_APP = "1.8.2";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -746,6 +746,20 @@ if (MODOS_VALIDOS.indexOf(estado.prefs.modoEnvio) < 0) {
   estado.prefs.modoEnvio = "auto";
   almacen.escribir("prefs", estado.prefs);
 }
+
+/* Un identificador con formato inválido guardado en el teléfono —por ejemplo,
+   el texto de la firma que quedó en clientId por un config.json mal armado—
+   se descarta al arrancar. Si no, se manda a Microsoft y devuelve AADSTS700016. */
+let idsDepurados = [];
+if (estado.prefs.clientId && !clientIdValido(estado.prefs.clientId)) {
+  idsDepurados.push("Client ID");
+  estado.prefs.clientId = "";
+}
+if (estado.prefs.tenantId && !tenantIdValido(estado.prefs.tenantId)) {
+  idsDepurados.push("Tenant ID");
+  estado.prefs.tenantId = "";
+}
+if (idsDepurados.length) almacen.escribir("prefs", estado.prefs);
 
 function guardar(clave) {
   almacen.escribir(clave, estado[clave]);
@@ -1672,20 +1686,17 @@ $("#selModo").addEventListener("change", (ev) => {
   pintarEstadoCuenta();
   pintarFranjaCuenta();
 });
-$("#inpClientId").addEventListener("input", (ev) => {
-  estado.prefs.clientId = ev.target.value.trim();
+function guardarIdentificador(clave, valor) {
+  estado.prefs[clave] = String(valor || "").trim();
   guardar("prefs");
   msalApp = null;
   actualizarFranja();
   pintarEstadoCuenta();
-});
+}
 
-$("#inpTenantId").addEventListener("input", (ev) => {
-  estado.prefs.tenantId = ev.target.value.trim();
-  guardar("prefs");
-  msalApp = null;
-  actualizarFranja();
-  pintarEstadoCuenta();
+["input", "change", "blur"].forEach((evento) => {
+  $("#inpClientId").addEventListener(evento, (ev) => guardarIdentificador("clientId", ev.target.value));
+  $("#inpTenantId").addEventListener(evento, (ev) => guardarIdentificador("tenantId", ev.target.value));
 });
 
 function probarDictado() {
@@ -1755,6 +1766,8 @@ async function cargarMsal() {
 async function obtenerMsal() {
   const p = estado.prefs;
   if (!p.clientId || !p.tenantId) throw new Error("Falta el Client ID o el Tenant ID en Ajustes.");
+  if (!clientIdValido(p.clientId)) throw new Error("El Client ID no tiene formato de GUID. Copialo de Azure → Overview → Application (client) ID.");
+  if (!tenantIdValido(p.tenantId)) throw new Error("El Tenant ID no tiene formato válido. Copialo de Azure → Overview → Directory (tenant) ID.");
   if (msalApp) return msalApp;
   await cargarMsal();
   msalApp = new msal.PublicClientApplication({
@@ -2727,6 +2740,9 @@ if ("serviceWorker" in navigator) {
   }
   actualizarFranja();
   pintarFranjaCuenta();
+  if (idsDepurados.length) {
+    toast("Se descartó un " + idsDepurados.join(" y un ") + " con formato inválido. Cargalo de nuevo en Ajustes.", "malo");
+  }
 })();
 </script>
 </body>
