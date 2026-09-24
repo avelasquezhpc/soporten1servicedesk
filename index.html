@@ -128,6 +128,23 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
 .btn-grupo{display:flex;gap:8px;margin-top:8px}
 .btn-grupo .btn{flex:1}
 
+/* ---------- Fotos adjuntas ---------- */
+.fotos-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fotos-cab .rotulo{margin-bottom:6px}
+#cuentaFotos{font-size:12px;color:var(--texto2);font-variant-numeric:tabular-nums;white-space:nowrap}
+#cuentaFotos.lleno{color:var(--aviso)}
+.miniaturas{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.miniaturas:empty{display:none}
+.miniatura{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--superficie2);border:1px solid var(--linea)}
+.miniatura img{width:100%;height:100%;object-fit:cover;display:block}
+.miniatura .quitar{
+  position:absolute;top:3px;right:3px;width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;background:rgba(0,0,0,.62);color:#fff;
+}
+.miniatura .quitar svg{width:16px;height:16px}
+.miniatura .peso{position:absolute;left:0;right:0;bottom:0;padding:2px 4px;font-size:10px;text-align:center;color:#fff;background:rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+.miniatura.cargando{display:grid;place-items:center;font-size:11px;color:var(--texto2)}
+
 /* ---------- Dictado ---------- */
 .grabando{animation:pulso 1.1s ease-in-out infinite}
 @keyframes pulso{50%{opacity:.55}}
@@ -343,6 +360,26 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
     <p class="ayuda oculto" id="avisoDictado"></p>
   </div>
 
+  <div class="campo" id="campoFotos">
+    <div class="fotos-cab">
+      <span class="rotulo">Fotos adjuntas</span>
+      <span id="cuentaFotos">0 de 5</span>
+    </div>
+    <div class="btn-grupo" style="margin-top:0">
+      <button class="btn" id="btnTomarFoto" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Tomar foto
+      </button>
+      <button class="btn" id="btnElegirFotos" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+        Elegir fotos
+      </button>
+    </div>
+    <input type="file" id="inFotoCamara" accept="image/*" capture="environment" hidden>
+    <input type="file" id="inFotoGaleria" accept="image/*" multiple hidden>
+    <div class="miniaturas" id="miniaturas"></div>
+  </div>
+
   <div class="campo">
     <label class="rotulo">Destinatarios</label>
     <div class="fila">
@@ -549,7 +586,7 @@ textarea{min-height:120px;resize:vertical;line-height:1.5}
    ========================================================================= */
 
 const NS = "rrn1:v1:";
-const VERSION_APP = "1.9.0";
+const VERSION_APP = "1.10.0";
 const RUTA_CONFIG = "./config.json";
 const LIMITE_HISTORIAL = 50;
 
@@ -637,7 +674,8 @@ const ICO = {
   basura: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6M14 11v6"/></svg>',
   mas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.2v.2"/></svg>',
-  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>'
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+  cerrar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
 };
 
 /* ---------------------- localStorage con degradación ---------------------- */
@@ -991,6 +1029,7 @@ function cuentaLista(via) {
 /* Un solo botón, en la pantalla principal, para que el técnico autorice su
    teléfono sin entrar a Ajustes ni tocar ningún dato de configuración. */
 function pintarFranjaCuenta() {
+  pintarCampoFotos();
   const f = $("#franjaCuenta");
   if (!f) return;
   const via = modoEfectivo();
@@ -1948,6 +1987,182 @@ $("#btnDesconectar").addEventListener("click", async () => {
   }
 });
 
+/* ------------------------------ Fotos adjuntas ---------------------------- */
+/* Hasta 5 fotos y 10 MB en total. Cada foto se reduce al tomarla (lado mayor
+   1600 px, JPEG): una foto de 4 MB del teléfono queda en ~300-500 KB y el
+   ticket sigue siendo legible. Además Graph rechaza un sendMail de más de
+   4 MB en total, así que antes de enviar se vuelve a reducir si hace falta. */
+
+const MAX_FOTOS = 5;
+const MAX_BYTES_FOTOS = 10 * 1024 * 1024;       // límite pedido: 10 MB entre todas
+const MAX_BYTES_GRAPH = 2.7 * 1024 * 1024;      // en base64 queda < 4 MB por mensaje
+const MAX_BYTES_ORIGINAL = 30 * 1024 * 1024;    // más que esto no se intenta abrir
+const PASOS_REDUCCION = [[1600, 0.8], [1280, 0.72], [1024, 0.65], [800, 0.6]];
+
+let fotos = [];           // { id, blob, bytes, url }
+let procesandoFotos = false;
+
+function fmtPeso(n) {
+  if (n < 1024 * 1024) return Math.max(1, Math.round(n / 1024)) + " KB";
+  return (n / (1024 * 1024)).toFixed(1).replace(".0", "") + " MB";
+}
+
+function totalFotos() { return fotos.reduce((a, f) => a + f.bytes, 0); }
+
+async function decodificarImagen(blob) {
+  if ("createImageBitmap" in window) {
+    try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); }
+    catch (e) { /* sigue con <img> */ }
+  }
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+}
+
+async function reducirImagen(blob, lado, calidad) {
+  const fuente = await decodificarImagen(blob);
+  const w0 = fuente.width || fuente.naturalWidth, h0 = fuente.height || fuente.naturalHeight;
+  if (!w0 || !h0) throw new Error("imagen vacía");
+  const k = Math.min(1, lado / Math.max(w0, h0));
+  const w = Math.round(w0 * k), h = Math.round(h0 * k);
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d");
+  cx.fillStyle = "#fff";                 // PNG con transparencia: fondo blanco, no negro
+  cx.fillRect(0, 0, w, h);
+  cx.drawImage(fuente, 0, 0, w, h);
+  if (fuente.close) fuente.close();
+  const salida = await new Promise((res) => cv.toBlob(res, "image/jpeg", calidad));
+  cv.width = cv.height = 0;              // libera memoria del canvas en el teléfono
+  if (!salida) throw new Error("no se pudo comprimir");
+  return salida;
+}
+
+function pintarFotos() {
+  const n = fotos.length;
+  const c = $("#cuentaFotos");
+  c.textContent = n ? n + " de " + MAX_FOTOS + " · " + fmtPeso(totalFotos()) + " de 10 MB" : "0 de " + MAX_FOTOS;
+  c.classList.toggle("lleno", n >= MAX_FOTOS);
+  const lleno = n >= MAX_FOTOS || procesandoFotos;
+  $("#btnTomarFoto").disabled = lleno;
+  $("#btnElegirFotos").disabled = lleno;
+  let html = fotos.map((f, i) =>
+    '<div class="miniatura"><img src="' + f.url + '" alt="Foto ' + (i + 1) + '">' +
+    '<button class="quitar" type="button" data-quitar-foto="' + f.id + '" aria-label="Quitar foto ' + (i + 1) + '">' + ICO.cerrar + "</button>" +
+    '<span class="peso">' + fmtPeso(f.bytes) + "</span></div>"
+  ).join("");
+  if (procesandoFotos) html += '<div class="miniatura cargando">Procesando…</div>';
+  $("#miniaturas").innerHTML = html;
+}
+
+async function agregarFotos(lista) {
+  const archivos = Array.from(lista || []);
+  if (!archivos.length) return;
+  const libres = MAX_FOTOS - fotos.length;
+  if (libres <= 0) { toast("Ya tenés " + MAX_FOTOS + " fotos. Quitá una para agregar otra.", "malo"); return; }
+
+  const avisos = [];
+  if (archivos.length > libres) avisos.push("Solo se agregaron " + libres + ": el máximo es " + MAX_FOTOS + ".");
+  procesandoFotos = true;
+  pintarFotos();
+
+  for (const f of archivos.slice(0, libres)) {
+    if (f.type && f.type.indexOf("image/") !== 0) { avisos.push("\"" + f.name + "\" no es una imagen."); continue; }
+    if (f.size > MAX_BYTES_ORIGINAL) { avisos.push("Una foto era demasiado grande para abrirla."); continue; }
+    let blob;
+    try {
+      blob = await reducirImagen(f, PASOS_REDUCCION[0][0], PASOS_REDUCCION[0][1]);
+    } catch (e) {
+      avisos.push("No se pudo leer una de las fotos (formato no compatible).");
+      continue;
+    }
+    if (totalFotos() + blob.size > MAX_BYTES_FOTOS) {
+      avisos.push("Una foto no entró: se pasaría de 10 MB en total.");
+      continue;
+    }
+    fotos.push({ id: uid("f"), blob: blob, bytes: blob.size, url: URL.createObjectURL(blob) });
+  }
+
+  procesandoFotos = false;
+  pintarFotos();
+  if (avisos.length) toast(avisos.join(" "), "malo");
+}
+
+function quitarFoto(id) {
+  const f = fotos.find((x) => x.id === id);
+  if (f) URL.revokeObjectURL(f.url);
+  fotos = fotos.filter((x) => x.id !== id);
+  pintarFotos();
+}
+
+function vaciarFotos() {
+  fotos.forEach((f) => URL.revokeObjectURL(f.url));
+  fotos = [];
+  pintarFotos();
+}
+
+function blobABase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(",")[1] || "");
+    r.onerror = () => rej(r.error || new Error("lectura"));
+    r.readAsDataURL(blob);
+  });
+}
+
+/* Deja las fotos listas para el correo. Si entre todas superan lo que Graph
+   acepta en un solo envío, las reduce un escalón más hasta que entren. */
+async function prepararAdjuntos(fecha) {
+  if (!fotos.length) return [];
+  let blobs = fotos.map((f) => f.blob);
+  let total = blobs.reduce((a, b) => a + b.size, 0);
+  for (let i = 1; total > MAX_BYTES_GRAPH && i < PASOS_REDUCCION.length; i++) {
+    const [lado, q] = PASOS_REDUCCION[i];
+    blobs = await Promise.all(blobs.map((b) => reducirImagen(b, lado, q).catch(() => b)));
+    total = blobs.reduce((a, b) => a + b.size, 0);
+  }
+  if (total > MAX_BYTES_GRAPH) throw new Error("Las fotos pesan demasiado para un solo correo. Quitá alguna y probá de nuevo.");
+  const sello = selloArchivo(new Date(fecha));
+  const salida = [];
+  for (let i = 0; i < blobs.length; i++) {
+    salida.push({
+      nombre: "N1_" + sello + "_" + (i + 1) + ".jpg",
+      tipo: "image/jpeg",
+      bytes: blobs[i].size,
+      b64: await blobABase64(blobs[i])
+    });
+  }
+  return salida;
+}
+
+$("#btnTomarFoto").addEventListener("click", () => $("#inFotoCamara").click());
+$("#btnElegirFotos").addEventListener("click", () => $("#inFotoGaleria").click());
+["#inFotoCamara", "#inFotoGaleria"].forEach((sel) => {
+  $(sel).addEventListener("change", async (ev) => {
+    const input = ev.target;
+    await agregarFotos(input.files);
+    input.value = "";          // permite volver a elegir la misma foto
+  });
+});
+$("#miniaturas").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-quitar-foto]");
+  if (b) quitarFoto(b.dataset.quitarFoto);
+});
+
+/* En modo manual (mailto) no hay forma de adjuntar archivos: se oculta. */
+function pintarCampoFotos() {
+  const manual = esModoManual(modoEfectivo());
+  $("#campoFotos").classList.toggle("oculto", manual);
+}
+
+pintarFotos();
+
 /* ------------------------------ Armado del correo ------------------------- */
 
 function cuerpoCorreo(texto, fecha) {
@@ -1995,6 +2210,14 @@ async function enviarPorGraph(reg) {
     ccRecipients: dest(reg.cc),
     bccRecipients: dest(reg.cco)
   };
+  if (Array.isArray(reg.adjuntos) && reg.adjuntos.length) {
+    mensaje.attachments = reg.adjuntos.map((a) => ({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: a.nombre,
+      contentType: a.tipo,
+      contentBytes: a.b64
+    }));
+  }
 
   const r = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
     method: "POST",
@@ -2012,6 +2235,7 @@ async function enviarPorGraph(reg) {
       detalle = (j && j.error && j.error.message) ? j.error.message : "";
     } catch (e) { /* sin cuerpo */ }
     if (r.status === 401 || r.status === 403) throw new ErrorSesion(detalle || "Sesión vencida");
+    if (r.status === 413) detalle = "las fotos superan el tamaño que acepta Outlook en un envío";
     const err = new Error("Graph respondió " + r.status + (detalle ? ": " + detalle : ""));
     err.http = r.status;
     throw err;
@@ -2095,6 +2319,7 @@ function limpiarFormulario() {
   el.texto.value = "";
   textoBase = ""; finalAcum = "";
   el.selCategoria.value = "";
+  vaciarFotos();
   seleccionDest = null;
   el.panelDest.classList.add("oculto");
   el.chips.setAttribute("aria-expanded", "false");
@@ -2112,8 +2337,22 @@ async function enviar() {
   const reg = armarRegistro();
   if (!reg.para.length && !reg.cc.length && !reg.cco.length) { toast("Marcá al menos un destinatario.", "malo"); return; }
 
+  if (procesandoFotos) { toast("Esperá a que terminen de procesarse las fotos.", "malo"); return; }
+
   const modo = modoEfectivo();
-  estadoBoton("enviando", "Enviando…");
+  estadoBoton("enviando", fotos.length ? "Preparando fotos…" : "Enviando…");
+
+  if (!esModoManual(modo) && fotos.length) {
+    try {
+      reg.adjuntos = await prepararAdjuntos(reg.fecha);
+    } catch (e) {
+      estadoBoton("error", "No se envió");
+      toast(e.message || "No se pudieron preparar las fotos.", "malo");
+      setTimeout(() => estadoBoton("listo", "Enviar registro"), 3500);
+      return;
+    }
+    estadoBoton("enviando", "Enviando…");
+  }
 
   if (esModoManual(modo)) {
     reg.estado = "manual";
@@ -2199,7 +2438,8 @@ $("#btnPendientes").addEventListener("click", () => { mostrarVista("historial");
 function agregarHistorial(reg) {
   estado.historial.unshift({
     id: reg.id, fecha: reg.fecha, asunto: reg.asunto, estado: reg.estado,
-    datos: reg.datos
+    datos: reg.datos,
+    fotos: (reg.adjuntos || []).length
   });
   if (estado.historial.length > LIMITE_HISTORIAL) estado.historial.length = LIMITE_HISTORIAL;
   guardar("historial");
@@ -2223,6 +2463,7 @@ function pintarHistorial() {
       '<div class="asunto">' + esc(h.asunto) + "</div>" +
       '<div class="meta"><span class="estado ' + esc(h.estado) + '">' + esc(ROTULO_ESTADO[h.estado] || h.estado) + "</span>" +
       "<span>" + esc(fmtFecha(h.fecha)) + "</span>" +
+      (h.fotos ? "<span>" + h.fotos + (h.fotos === 1 ? " foto" : " fotos") + "</span>" : "") +
       '<button class="btn chico" data-reusar="' + esc(h.id) + '">Reutilizar</button></div></div>'
     ).join("");
   }
